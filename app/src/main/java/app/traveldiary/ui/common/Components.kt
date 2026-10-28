@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -128,19 +129,25 @@ fun CountryPickerDialog(countries: List<Country>, onDismiss: () -> Unit, onSelec
     )
 }
 
-/** Read-only text field that opens a date picker; the trailing button clears the date. */
+/**
+ * Read-only text field that opens a date picker; the trailing button clears the date.
+ * Whether the picker is open is up to the caller, so it can also open it without a tap.
+ * Confirming a date closes the picker before calling [onDateChange], which may open another one.
+ */
 @Composable
 fun DateField(
     label: String,
     date: LocalDate?,
     onDateChange: (LocalDate?) -> Unit,
+    pickerOpen: Boolean,
+    onPickerOpenChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     suggestedDate: LocalDate? = null,
 ) {
-    var showPicker by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
+    val currentOnPickerOpenChange by rememberUpdatedState(onPickerOpenChange)
     LaunchedEffect(interactionSource) {
-        interactionSource.interactions.collect { if (it is PressInteraction.Release) showPicker = true }
+        interactionSource.interactions.collect { if (it is PressInteraction.Release) currentOnPickerOpenChange(true) }
     }
     OutlinedTextField(
         value = date?.let(::formatDate) ?: "",
@@ -160,18 +167,18 @@ fun DateField(
         interactionSource = interactionSource,
         modifier = modifier,
     )
-    if (showPicker) {
+    if (pickerOpen) {
         val pickerState = rememberDatePickerState(initialSelectedDateMillis = (date ?: suggestedDate)?.toPickerMillis())
         DatePickerDialog(
-            onDismissRequest = { showPicker = false },
+            onDismissRequest = { onPickerOpenChange(false) },
             confirmButton = {
                 TextButton(onClick = {
-                    showPicker = false
+                    onPickerOpenChange(false)
                     pickerState.selectedDateMillis?.let { onDateChange(pickerMillisToDate(it)) }
                 }) { Text(stringResource(R.string.action_ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showPicker = false }) { Text(stringResource(R.string.action_cancel)) }
+                TextButton(onClick = { onPickerOpenChange(false) }) { Text(stringResource(R.string.action_cancel)) }
             },
         ) {
             DatePicker(state = pickerState)
