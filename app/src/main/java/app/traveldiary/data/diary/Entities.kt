@@ -25,6 +25,8 @@ data class PlaceEntity(
     val latitude: Double,
     val longitude: Double,
     val createdAt: Long,
+    /** File name of the place's photo in [PlacePhotos], or null when it has none. */
+    val photo: String? = null,
 )
 
 /** One stay at a place, with optional dates and free-text notes. */

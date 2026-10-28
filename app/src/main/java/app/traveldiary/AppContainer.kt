@@ -6,7 +6,9 @@ import app.traveldiary.data.cities.CityRepository
 import app.traveldiary.data.countries.CountryRepository
 import app.traveldiary.data.diary.DiaryDatabase
 import app.traveldiary.data.diary.DiaryRepository
+import app.traveldiary.data.diary.PlacePhotos
 import app.traveldiary.map.WorldMapRepository
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,7 +21,8 @@ class AppContainer(context: Context) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val countries = CountryRepository(this.context)
-    val diary = DiaryRepository(DiaryDatabase.create(this.context))
+    val photos = PlacePhotos(File(this.context.filesDir, "photos"), this.context.contentResolver)
+    val diary = DiaryRepository(DiaryDatabase.create(this.context), photos)
     val cities = CityRepository(this.context, CityDatabase.create(this.context), scope)
     val worldMap = WorldMapRepository(this.context, scope)
 

@@ -26,10 +26,13 @@ light up on a world map, and keep notes about each trip. Everything stays on you
   villages can be downloaded from [GeoNames](https://www.geonames.org) in Settings.
 - **A diary for each place**: several visits per place, each with optional arrival and departure
   dates and notes. Browse them by country or on a timeline.
+- **A photo for each place**: pick one from your gallery and it becomes the background of the
+  place's page. The app keeps its own scaled-down copy, so deleting the original changes nothing.
 - **Places that are not in any list**: long-press anywhere on the map to drop your own pin, for
   a national park, an island or a research station in Antarctica.
 - **Statistics**: countries visited, share of the world's 195 countries, continents, travel days.
-- **Backup**: export the whole diary to a JSON file and import it on another phone.
+- **Backup**: export the whole diary to a JSON file and import it on another phone. Photos are
+  not part of the export; they do move with Android's phone-to-phone transfer.
 - **Private**: no account, no ads, no analytics. The app only connects to the internet when you
   download a bigger city list.
 - Light and dark theme, English only for now.
@@ -39,11 +42,11 @@ light up on a world map, and keep notes about each trip. Everything stays on you
 The app is distributed through GitHub releases, ready for [Obtainium](https://github.com/ImranR98/Obtainium),
 which installs it and keeps it up to date:
 
-[<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="50">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/0PkCk0/travel-diary)
+[<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="50">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/ck-lithium/travel-diary)
 
-Or by hand: in Obtainium tap **Add app**, paste `https://github.com/0PkCk0/travel-diary` and
+Or by hand: in Obtainium tap **Add app**, paste `https://github.com/ck-lithium/travel-diary` and
 tap **Add**. You can also download the APK directly from the
-[releases page](https://github.com/0PkCk0/travel-diary/releases). Android 8.0 or newer is required.
+[releases page](https://github.com/ck-lithium/travel-diary/releases). Android 8.0 or newer is required.
 
 ## How it works
 
@@ -51,6 +54,7 @@ tap **Add**. You can also download the APK directly from the
 | --- | --- |
 | Language and UI | Kotlin, Jetpack Compose, Material 3 |
 | Storage | Two local SQLite databases (Room): `diary.db` for your places and visits, `cities.db` for the city list, which can be replaced at any time without touching the diary |
+| Photos | Picked with the system photo picker (no storage permission), then saved as a JPEG of at most 2048 px, turned upright, in the app's private `photos/` folder |
 | Map | Drawn on a Compose `Canvas` from the bundled country shapes (Miller projection), so no map tiles, API key or network are needed |
 | City search | Accent-insensitive prefix search over the local city list: "zurich", "Zürich" and "Zuerich" all work |
 | Downloads | Settings > City database downloads `citiesXXXX.zip` straight from `download.geonames.org` and imports it in one transaction |
@@ -82,7 +86,7 @@ Open the folder in Android Studio, or use the command line:
 ```
 app/src/main/java/app/traveldiary/
   data/cities/     city list: Room database, GeoNames parser, downloads, search
-  data/diary/      your places and visits, JSON backup
+  data/diary/      your places, visits and photos, JSON backup
   data/countries/  country names, continents, flags
   data/stats/      statistics
   map/             projection, country shapes, the zoomable map composable

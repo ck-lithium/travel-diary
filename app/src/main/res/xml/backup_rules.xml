@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android backup (Android 11 and older): keep the diary, skip the city database, which can be rebuilt. -->
+<!-- Android backup (Android 11 and older): keep the diary, skip the city database, which can be rebuilt,
+     and the photos, which could exceed the 25 MB backup quota and stop the diary from being backed up. -->
 <full-backup-content>
     <exclude domain="database" path="cities.db" />
     <exclude domain="database" path="cities.db-shm" />
     <exclude domain="database" path="cities.db-wal" />
+    <exclude domain="file" path="photos/" />
 </full-backup-content>

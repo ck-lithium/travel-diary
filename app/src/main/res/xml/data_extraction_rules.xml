@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android backup and device transfer (Android 12+): keep the diary, skip the city database, which can be rebuilt. -->
+<!-- Android backup and device transfer (Android 12+): keep the diary, skip the city database, which can be rebuilt.
+     Photos move with a device transfer but are left out of the cloud backup: they could exceed its 25 MB quota
+     and stop the diary from being backed up. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="database" path="cities.db" />
         <exclude domain="database" path="cities.db-shm" />
         <exclude domain="database" path="cities.db-wal" />
+        <exclude domain="file" path="photos/" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="database" path="cities.db" />

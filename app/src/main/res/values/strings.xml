@@ -11,6 +11,7 @@
     <string name="action_delete">Delete</string>
     <string name="action_dismiss">Dismiss</string>
     <string name="action_ok">OK</string>
+    <string name="action_remove">Remove</string>
     <string name="action_retry">Try again</string>
     <string name="action_save">Save</string>
 
@@ -106,6 +107,13 @@
     <string name="place_delete">Delete place</string>
     <string name="place_delete_title">Delete %1$s?</string>
     <string name="place_delete_message">The place and all its visits and notes will be removed from your diary.</string>
+    <string name="place_add_photo">Add photo</string>
+    <string name="place_photo">Photo</string>
+    <string name="place_change_photo">Change photo</string>
+    <string name="place_remove_photo">Remove photo</string>
+    <string name="place_remove_photo_title">Remove the photo?</string>
+    <string name="place_remove_photo_message">It will be deleted from your diary. The original stays in your gallery.</string>
+    <string name="place_photo_failed">This photo could not be added</string>
     <string name="place_no_visits">No visits recorded yet.</string>
     <plurals name="place_visits">
         <item quantity="one">%d visit</item>
@@ -174,13 +182,13 @@
 
     <string name="settings_backup_title">Backup</string>
     <string name="settings_export">Export diary</string>
-    <string name="settings_export_description">Save all your places, dates and notes to a file</string>
+    <string name="settings_export_description">Save all your places, dates and notes to a file (without photos)</string>
     <string name="settings_export_done">Diary exported</string>
     <string name="settings_export_failed">The diary could not be exported</string>
     <string name="settings_import">Import diary</string>
     <string name="settings_import_description">Replace this diary with a backup file</string>
     <string name="settings_import_confirm_title">Replace your diary?</string>
-    <string name="settings_import_confirm_message">All the places and notes currently in the app will be replaced by the ones in the backup.</string>
+    <string name="settings_import_confirm_message">All the places, notes and photos currently in the app will be replaced by the ones in the backup. Backups do not contain photos.</string>
     <string name="settings_import_confirm_action">Replace</string>
     <plurals name="settings_import_done">
         <item quantity="one">%d place imported</item>

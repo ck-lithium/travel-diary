@@ -43,6 +43,9 @@ interface DiaryDao {
     @Update
     suspend fun updateVisit(visit: VisitEntity)
 
+    @Query("UPDATE places SET photo = :photo WHERE id = :id")
+    suspend fun updatePlacePhoto(id: Long, photo: String?)
+
     @Query("DELETE FROM visits WHERE id = :id")
     suspend fun deleteVisit(id: Long)
 

@@ -5,25 +5,36 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.traveldiary.data.cities.CityEntity
+import java.io.File
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DiaryRepositoryTest {
 
+    @get:Rule
+    val folder = TemporaryFolder()
+
     private lateinit var database: DiaryDatabase
+    private lateinit var photoDirectory: File
+    private lateinit var photos: PlacePhotos
     private lateinit var diary: DiaryRepository
 
     private val paris = CityEntity(2988507, "Paris", "Île-de-France", "FR", 48.85, 2.35, 2_138_551, "paris")
@@ -33,7 +44,9 @@ class DiaryRepositoryTest {
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = Room.inMemoryDatabaseBuilder(context, DiaryDatabase::class.java).build()
-        diary = DiaryRepository(database, clock = { 1_700_000_000_000 })
+        photoDirectory = folder.newFolder("photos")
+        photos = PlacePhotos(photoDirectory, context.contentResolver)
+        diary = DiaryRepository(database, photos, clock = { 1_700_000_000_000 })
     }
 
     @After
@@ -113,4 +126,51 @@ class DiaryRepositoryTest {
         assertThrows(InvalidBackupException::class.java) { runBlocking { diary.importBackup("{}") } }
         assertEquals(1, diary.places.first().size)
     }
+
+    @Test
+    fun aPhotoCanBeAddedReplacedAndRemoved() = runBlocking {
+        val placeId = diary.addVisit(paris, june)
+
+        diary.setPlacePhoto(placeId, folder.jpeg(64, 48))
+        val first = diary.getPlace(placeId)!!.photo!!
+        assertEquals(setOf(first), storedPhotos())
+
+        diary.setPlacePhoto(placeId, folder.jpeg(64, 48))
+        val second = diary.getPlace(placeId)!!.photo!!
+        assertNotEquals(first, second)
+        assertEquals(setOf(second), storedPhotos())
+
+        diary.removePlacePhoto(placeId)
+        assertNull(diary.getPlace(placeId)!!.photo)
+        assertTrue(storedPhotos().isEmpty())
+    }
+
+    @Test
+    fun deletingAPlaceDeletesItsPhoto() = runBlocking {
+        val placeId = diary.addVisit(paris, june)
+        diary.setPlacePhoto(placeId, folder.jpeg(64, 48))
+
+        diary.deletePlace(placeId)
+
+        assertTrue(storedPhotos().isEmpty())
+    }
+
+    @Test
+    fun aPhotoForAMissingPlaceIsNotKept() = runBlocking {
+        diary.setPlacePhoto(placeId = 42, source = folder.jpeg(64, 48))
+        assertTrue(storedPhotos().isEmpty())
+    }
+
+    @Test
+    fun importingABackupRemovesThePhotos() = runBlocking {
+        val placeId = diary.addVisit(paris, june)
+        diary.setPlacePhoto(placeId, folder.jpeg(64, 48))
+
+        diary.importBackup(diary.exportBackup())
+
+        assertNull(diary.places.first().single().place.photo)
+        assertTrue(storedPhotos().isEmpty())
+    }
+
+    private fun storedPhotos(): Set<String> = photoDirectory.list().orEmpty().toSet()
 }

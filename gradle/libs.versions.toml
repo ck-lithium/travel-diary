@@ -8,6 +8,7 @@ coreKtx = "1.19.0"
 lifecycle = "2.11.0"
 navigation = "2.10.1"
 room = "2.8.5"
+exifinterface = "1.4.2"
 coroutines = "1.11.0"
 serialization = "1.11.0"
 junit = "4.13.2"
@@ -30,6 +31,7 @@ androidx-compose-material-icons-extended = { module = "androidx.compose.material
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "exifinterface" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }

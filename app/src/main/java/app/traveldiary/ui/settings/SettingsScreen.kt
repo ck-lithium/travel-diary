@@ -66,7 +66,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale
 
-const val SOURCE_CODE_URL = "https://github.com/0PkCk0/travel-diary"
+const val SOURCE_CODE_URL = "https://github.com/ck-lithium/travel-diary"
 private const val NATURAL_EARTH_URL = "https://www.naturalearthdata.com"
 private const val GEONAMES_URL = "https://www.geonames.org"
 
