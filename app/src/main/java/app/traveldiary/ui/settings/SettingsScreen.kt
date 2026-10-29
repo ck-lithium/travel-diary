@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
+import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationCity
 import androidx.compose.material.icons.outlined.Lock
@@ -67,6 +68,7 @@ import java.time.ZoneId
 import java.util.Locale
 
 const val SOURCE_CODE_URL = "https://github.com/ck-lithium/travel-diary"
+private const val LICENSE_URL = "$SOURCE_CODE_URL/blob/main/LICENSE"
 private const val NATURAL_EARTH_URL = "https://www.naturalearthdata.com"
 private const val GEONAMES_URL = "https://www.geonames.org"
 
@@ -152,6 +154,16 @@ fun SettingsScreenContent(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 16.dp),
         ) {
+            SectionHeader(stringResource(R.string.settings_map_title))
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_flag_map)) },
+                supportingContent = { Text(stringResource(R.string.settings_flag_map_description)) },
+                leadingContent = { Icon(Icons.Outlined.Flag, contentDescription = null) },
+                trailingContent = { Switch(checked = flagMap, onCheckedChange = null) },
+                modifier = Modifier.toggleable(value = flagMap, role = Role.Switch, onValueChange = onFlagMapChange),
+            )
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionHeader(stringResource(R.string.settings_cities_title))
             Text(
                 stringResource(R.string.settings_cities_description),

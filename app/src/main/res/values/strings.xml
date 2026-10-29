@@ -202,6 +202,8 @@
     <string name="settings_privacy">Private by design</string>
     <string name="settings_privacy_description">No account, no ads, no tracking. Your diary stays on this device; the app only goes online to download a city database when you ask.</string>
     <string name="settings_source_code">Source code</string>
+    <string name="settings_license">License</string>
+    <string name="settings_license_description">Free software under the GNU General Public License, version 3 or later</string>
     <string name="settings_map_data">Map data</string>
     <string name="settings_map_data_description">Natural Earth (public domain)</string>
     <string name="settings_city_data">City data</string>
