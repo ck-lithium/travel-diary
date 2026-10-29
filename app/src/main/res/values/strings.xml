@@ -156,6 +156,10 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_map_title">Map</string>
+    <string name="settings_flag_map">Flags on the map</string>
+    <string name="settings_flag_map_description">Paint the countries you have visited with their flag</string>
+
     <string name="settings_cities_title">City database</string>
     <string name="settings_cities_description">City search works offline with a local copy of GeoNames. Download a bigger list to find smaller towns and villages. Your diary is not affected when you switch.</string>
     <string name="settings_cities_installed">In use: %1$s</string>
@@ -208,4 +212,6 @@
     <string name="settings_map_data_description">Natural Earth (public domain)</string>
     <string name="settings_city_data">City data</string>
     <string name="settings_city_data_description">GeoNames (geonames.org), licensed under CC BY 4.0</string>
+    <string name="settings_flag_data">Flags</string>
+    <string name="settings_flag_data_description">flag-icons by Panayiotis Lipiridis, MIT License</string>
 </resources>

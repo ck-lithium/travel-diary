@@ -14,12 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationCity
@@ -37,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -52,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.traveldiary.BuildConfig
@@ -71,11 +75,13 @@ const val SOURCE_CODE_URL = "https://github.com/ck-lithium/travel-diary"
 private const val LICENSE_URL = "$SOURCE_CODE_URL/blob/main/LICENSE"
 private const val NATURAL_EARTH_URL = "https://www.naturalearthdata.com"
 private const val GEONAMES_URL = "https://www.geonames.org"
+private const val FLAG_ICONS_URL = "https://github.com/lipis/flag-icons"
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel) {
     val installed by viewModel.installed.collectAsStateWithLifecycle()
     val importState by viewModel.importState.collectAsStateWithLifecycle()
+    val flagMap by viewModel.flagMap.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var pendingImport by rememberSaveable { mutableStateOf<Uri?>(null) }
@@ -94,7 +100,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     SettingsScreenContent(
         installed = installed,
         importState = importState,
+        flagMap = flagMap,
         snackbarHostState = snackbarHostState,
+        onFlagMapChange = viewModel::setFlagMap,
         onInstall = viewModel::install,
         onCancelDownload = viewModel::cancelDownload,
         onDismissError = viewModel::dismissError,
@@ -134,7 +142,9 @@ private fun SettingsMessage.text(context: Context): String = when (this) {
 fun SettingsScreenContent(
     installed: InstalledCities?,
     importState: CityImportState,
+    flagMap: Boolean,
     snackbarHostState: SnackbarHostState,
+    onFlagMapChange: (Boolean) -> Unit,
     onInstall: (CityDataset) -> Unit,
     onCancelDownload: () -> Unit,
     onDismissError: () -> Unit,
@@ -238,6 +248,12 @@ fun SettingsScreenContent(
                 modifier = Modifier.clickable { uriHandler.openUri(SOURCE_CODE_URL) },
             )
             ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_license)) },
+                supportingContent = { Text(stringResource(R.string.settings_license_description)) },
+                leadingContent = { Icon(Icons.Outlined.Gavel, contentDescription = null) },
+                modifier = Modifier.clickable { uriHandler.openUri(LICENSE_URL) },
+            )
+            ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_map_data)) },
                 supportingContent = { Text(stringResource(R.string.settings_map_data_description)) },
                 leadingContent = { Icon(Icons.Outlined.Public, contentDescription = null) },
@@ -248,6 +264,12 @@ fun SettingsScreenContent(
                 supportingContent = { Text(stringResource(R.string.settings_city_data_description)) },
                 leadingContent = { Icon(Icons.Outlined.LocationCity, contentDescription = null) },
                 modifier = Modifier.clickable { uriHandler.openUri(GEONAMES_URL) },
+            )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_flag_data)) },
+                supportingContent = { Text(stringResource(R.string.settings_flag_data_description)) },
+                leadingContent = { Icon(Icons.Outlined.Flag, contentDescription = null) },
+                modifier = Modifier.clickable { uriHandler.openUri(FLAG_ICONS_URL) },
             )
         }
     }

@@ -57,6 +57,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -91,9 +92,11 @@ fun MapScreen(
 ) {
     val map by viewModel.map.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val flags by viewModel.flags.collectAsStateWithLifecycle()
     MapScreenContent(
         map = map,
         state = state,
+        flags = flags,
         countryOf = viewModel::country,
         onSearch = onSearch,
         onOpenPlace = onOpenPlace,
@@ -113,6 +116,7 @@ fun MapScreenContent(
     onOpenPlace: (Long) -> Unit,
     onAddCustomPlace: (latitude: Double, longitude: Double) -> Unit,
     modifier: Modifier = Modifier,
+    flags: Map<String, ImageBitmap> = emptyMap(),
     onPeriodChange: (GravityPeriod) -> Unit = {},
     focusPlaceId: Long? = null,
     onFocusHandled: () -> Unit = {},
@@ -156,6 +160,7 @@ fun MapScreenContent(
             state = viewport,
             visitedCountries = state.visitedCountries,
             pins = state.pins,
+            flags = flags,
             selectedCountry = selectedCountry,
             gravityTrajectory = if (gravityMode) state.gravityTimeline.trajectory else null,
             gravityCurrentPosition = if (gravityMode) state.gravityTimeline.trajectory.positionAt(playbackProgress) else null,
