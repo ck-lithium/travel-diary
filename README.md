@@ -98,6 +98,8 @@ tools/build_flags.sh            renders the bundled flag images (needs rsvg-conv
 scripts/create-release-key.sh   creates the release signing key
 ```
 
+Contributions are welcome: please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+
 ## Releasing
 
 Every release is built by GitHub Actions and signed with your release key. Obtainium (like
