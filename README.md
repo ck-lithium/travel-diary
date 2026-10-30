@@ -89,6 +89,10 @@ Open the folder in Android Studio, or use the command line:
 ./gradlew lintDebug
 ```
 
+The debug build is installed as `app.traveldiary.debug` and named "Travel Diary Debug", so it can
+sit next to the release on the same phone. It keeps its own diary: export and import a backup to
+move places between the two.
+
 ```
 app/src/main/java/app/traveldiary/
   data/cities/     city list: Room database, GeoNames parser, downloads, search

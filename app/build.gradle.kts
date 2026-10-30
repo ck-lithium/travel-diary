@@ -53,6 +53,12 @@ android {
     }
 
     buildTypes {
+        // Debug builds are signed with another key than releases: a different id lets them be
+        // installed next to the release instead of conflicting with it.
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

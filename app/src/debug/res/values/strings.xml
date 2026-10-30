@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: tells them apart from the release on the home screen. -->
+<resources>
+    <string name="app_name">Travel Diary Debug</string>
+</resources>
