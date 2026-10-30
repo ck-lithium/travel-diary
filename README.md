@@ -129,14 +129,19 @@ Android itself) only accepts an update signed with the same key as the installed
 ### Publishing a version
 
 ```sh
-git tag v1.0.0
+git fetch origin                      # main as it is on GitHub, with the pull requests just merged
+git log --oneline -3 origin/main      # check this is what you want to release
+git tag -a v1.0.0 -m "Travel Diary 1.0.0" origin/main
 git push origin v1.0.0
 ```
 
 The [Release workflow](.github/workflows/release.yml) runs the tests, builds the APK with the
 version taken from the tag and publishes `travel-diary-1.0.0.apk` as a GitHub release. Obtainium
 picks it up from there. Tags must look like `v1.2.3` and always go up: the Android version code
-is derived from them (`v1.2.3` becomes 10203).
+is derived from them (`v1.2.3` becomes 10203). The tag must be on the latest commit of `main`:
+a tag on an older commit, for example made without fetching first, stops the workflow before
+anything is built. Tag again with a new version instead of moving a published tag, so that phones
+which already installed it still get the update.
 
 To build a signed APK on your own machine, create a `keystore.properties` file in the project
 folder (it is ignored by git):

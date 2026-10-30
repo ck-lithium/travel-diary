@@ -31,6 +31,17 @@ jobs:
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
+      # A tag made on an out-of-date copy of main would release old code without any error.
+      - name: Check the tag is on the latest commit of main
+        run: |
+          git fetch --no-tags --depth=1 origin main
+          tagged="$(git rev-parse HEAD)"
+          latest="$(git rev-parse FETCH_HEAD)"
+          if [ "$tagged" != "$latest" ]; then
+            echo "::error::$GITHUB_REF_NAME is on ${tagged:0:7} but main is at ${latest:0:7}. Run 'git fetch' first, then tag the latest main with a new version (see 'Releasing' in README.md)."
+            exit 1
+          fi
+
       - name: Restore the signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
