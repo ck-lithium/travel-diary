@@ -69,4 +69,42 @@ class BackupTest {
         """.trimIndent()
         assertEquals("Rome", DiaryBackup.decode(json).single().name)
     }
+
+    @Test
+    fun keepsHomePeriods() {
+        val home = lisbon.copy(
+            homePeriods = listOf(
+                HomePeriodEntity(1, 1, LocalDate.of(2020, 9, 1), LocalDate.of(2023, 7, 31), 5_000),
+                HomePeriodEntity(2, 1, LocalDate.of(2025, 1, 1), null, 6_000),
+            ),
+        )
+
+        val place = DiaryBackup.decode(DiaryBackup.encode(listOf(home), exportedAt = 0)).single()
+
+        assertEquals(
+            home.homePeriods.map { it.copy(id = 0, placeId = 7) },
+            place.homePeriods.map { it.toEntity(placeId = 7) },
+        )
+    }
+
+    @Test
+    fun readsBackupsMadeBeforeHomes() {
+        val json = """
+            {"app": "travel-diary", "formatVersion": 1, "exportedAt": "x", "places": [
+              {"name": "Rome", "countryCode": "IT", "latitude": 41.9, "longitude": 12.5}
+            ]}
+        """.trimIndent()
+        assertEquals(emptyList<BackupHomePeriod>(), DiaryBackup.decode(json).single().homePeriods)
+    }
+
+    @Test
+    fun rejectsHomePeriodsWithInvalidDates() {
+        val json = """
+            {"app": "travel-diary", "formatVersion": 1, "exportedAt": "x", "places": [
+              {"name": "Rome", "countryCode": "IT", "latitude": 41.9, "longitude": 12.5,
+               "homePeriods": [{"startDate": "last summer"}]}
+            ]}
+        """.trimIndent()
+        assertThrows(InvalidBackupException::class.java) { DiaryBackup.decode(json) }
+    }
 }

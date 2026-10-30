@@ -20,7 +20,13 @@ class SettingsRepository(context: Context) {
         _flagMap.value = enabled
     }
 
+    /** True once the app has asked where the user lives, whatever the answer: it only asks once. */
+    val homeAsked: Boolean get() = preferences.getBoolean(KEY_HOME_ASKED, false)
+
+    fun markHomeAsked() = preferences.edit { putBoolean(KEY_HOME_ASKED, true) }
+
     private companion object {
         const val KEY_FLAG_MAP = "flag_map"
+        const val KEY_HOME_ASKED = "home_asked"
     }
 }

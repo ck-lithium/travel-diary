@@ -51,11 +51,47 @@ data class VisitEntity(
     val createdAt: Long,
 )
 
+/**
+ * A time when a place was the user's home. Days at home that no visit covers count as spent there,
+ * so the diary only needs the trips away from it.
+ */
+@Entity(
+    tableName = "home_periods",
+    foreignKeys = [
+        ForeignKey(
+            entity = PlaceEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["placeId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("placeId")],
+)
+data class HomePeriodEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val placeId: Long,
+    val startDate: LocalDate,
+    /** Last day living there, or null while the user still lives there. */
+    val endDate: LocalDate?,
+    val createdAt: Long,
+) {
+    /** Days at home from [startDate] to [endDate], never after [today]. */
+    fun daysUntil(today: LocalDate): Sequence<LocalDate> {
+        val last = minOf(endDate ?: today, today)
+        return generateSequence(startDate) { it.plusDays(1) }.takeWhile { !it.isAfter(last) }
+    }
+}
+
 data class PlaceWithVisits(
     @Embedded val place: PlaceEntity,
     @Relation(parentColumn = "id", entityColumn = "placeId")
     val visits: List<VisitEntity>,
+    @Relation(parentColumn = "id", entityColumn = "placeId")
+    val homePeriods: List<HomePeriodEntity> = emptyList(),
 ) {
+    /** True for a place where the user lives or has lived. */
+    val isHome: Boolean get() = homePeriods.isNotEmpty()
+
     /** Visits from the most recent to the oldest; visits without a date come last. */
     val sortedVisits: List<VisitEntity>
         get() = visits.sortedWith(

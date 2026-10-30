@@ -1,5 +1,6 @@
 package app.traveldiary.map
 
+import app.traveldiary.data.diary.HomePeriodEntity
 import app.traveldiary.data.diary.PlaceEntity
 import app.traveldiary.data.diary.PlaceWithVisits
 import app.traveldiary.data.diary.VisitEntity
@@ -184,6 +185,44 @@ class CenterOfGravityTest {
         assertEquals(date(2024, 1, 1), trajectory.dateAt(0f, start, 10))
         assertEquals(date(2024, 1, 6), trajectory.dateAt(0.5f, start, 10))
         assertEquals(date(2024, 1, 11), trajectory.dateAt(1f, start, 10))
+    }
+
+    private fun PlaceWithVisits.livedIn(start: LocalDate, end: LocalDate?) =
+        copy(homePeriods = listOf(HomePeriodEntity(nextId++, place.id, start, end, createdAt = 0)))
+
+    @Test
+    fun homeAloneMakesATimelineUntilToday() {
+        val rome = place("Rome", 41.9, 12.5).livedIn(date(2025, 1, 1), end = null)
+
+        val timeline = GravityTimeline.compute(listOf(rome), GravityPeriod.QUARTER, today = date(2025, 1, 31))
+
+        assertEquals(date(2025, 1, 1), timeline.startDate)
+        assertEquals(date(2025, 1, 31), timeline.endDate)
+        val last = timeline.trajectory.points.last()
+        assertEquals(41.9, last.latitude, 1e-6)
+        assertEquals(12.5, last.longitude, 1e-6)
+    }
+
+    @Test
+    fun homeDaysInTheFutureDoNotCount() {
+        val rome = place("Rome", 41.9, 12.5).livedIn(date(2025, 1, 1), date(2025, 12, 31))
+
+        val timeline = GravityTimeline.compute(listOf(rome), GravityPeriod.QUARTER, today = date(2025, 1, 10))
+
+        assertEquals(date(2025, 1, 10), timeline.endDate)
+    }
+
+    @Test
+    fun tripDaysAreNotAlsoSpentAtHome() {
+        // Home west of Greenwich, a trip as far east of it on the second day: one day each, so the
+        // average sits on the meridian. Counting the trip day at home too would pull it west.
+        val home = place("Home", 0.0, -10.0).livedIn(date(2025, 1, 1), date(2025, 1, 2))
+        val trip = place("Trip", 0.0, 10.0, date(2025, 1, 2) to date(2025, 1, 2))
+
+        val timeline = GravityTimeline.compute(listOf(home, trip), GravityPeriod.ALL, today = date(2025, 6, 1))
+
+        assertEquals(date(2025, 1, 2), timeline.endDate)
+        assertEquals(0.0, timeline.trajectory.points.last().longitude, 1e-6)
     }
 }
 

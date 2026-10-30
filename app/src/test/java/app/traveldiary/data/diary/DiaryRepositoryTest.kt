@@ -172,5 +172,53 @@ class DiaryRepositoryTest {
         assertTrue(storedPhotos().isEmpty())
     }
 
+    @Test
+    fun homeIsAPlaceOfTheDiary() = runBlocking {
+        val placeId = diary.addHome(paris, LocalDate.of(2025, 1, 1), end = null)
+
+        val place = diary.places.first().single()
+        assertEquals(placeId, place.place.id)
+        assertTrue(place.isHome)
+        assertTrue(place.visits.isEmpty())
+        assertEquals(LocalDate.of(2025, 1, 1), place.homePeriods.single().startDate)
+
+        // A visit to the city of the home goes to the same place.
+        assertEquals(placeId, diary.addVisit(paris, june))
+    }
+
+    @Test
+    fun removingTheOnlyHomePeriodRemovesAPlaceWithoutVisits() = runBlocking {
+        diary.addHome(paris, LocalDate.of(2025, 1, 1), end = null)
+        val periodId = diary.places.first().single().homePeriods.single().id
+
+        diary.deleteHomePeriod(periodId)
+
+        assertTrue(diary.places.first().isEmpty())
+    }
+
+    @Test
+    fun removingAHomeKeepsThePlaceWhenItHasVisits() = runBlocking {
+        diary.addVisit(paris, june)
+        diary.addHome(paris, LocalDate.of(2025, 1, 1), end = null)
+        val periodId = diary.places.first().single().homePeriods.single().id
+
+        diary.deleteHomePeriod(periodId)
+
+        val place = diary.places.first().single()
+        assertTrue(!place.isHome)
+        assertEquals(1, place.visits.size)
+    }
+
+    @Test
+    fun backupKeepsHomes() = runBlocking {
+        diary.addHome(paris, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31))
+
+        diary.importBackup(diary.exportBackup())
+
+        val period = diary.places.first().single().homePeriods.single()
+        assertEquals(LocalDate.of(2025, 1, 1), period.startDate)
+        assertEquals(LocalDate.of(2025, 12, 31), period.endDate)
+    }
+
     private fun storedPhotos(): Set<String> = photoDirectory.list().orEmpty().toSet()
 }

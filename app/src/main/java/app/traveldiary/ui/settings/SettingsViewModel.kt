@@ -8,15 +8,20 @@ import app.traveldiary.data.cities.CityDataset
 import app.traveldiary.data.cities.CityImportState
 import app.traveldiary.data.cities.InstalledCities
 import app.traveldiary.data.diary.InvalidBackupException
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/** A home period as listed in Settings; [endDate] is null while the user still lives there. */
+data class HomeRow(val periodId: Long, val placeName: String, val startDate: LocalDate, val endDate: LocalDate?)
 
 sealed interface SettingsMessage {
     data object ExportDone : SettingsMessage
@@ -36,6 +41,15 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     val importState: StateFlow<CityImportState> = container.cities.importState
 
     val flagMap: StateFlow<Boolean> = container.settings.flagMap
+
+    /** Every home period, the most recent first. */
+    val homes: StateFlow<List<HomeRow>> = container.diary.places
+        .map { places ->
+            places.flatMap { place ->
+                place.homePeriods.map { HomeRow(it.id, place.place.name, it.startDate, it.endDate) }
+            }.sortedByDescending { it.startDate }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _messages = Channel<SettingsMessage>(Channel.BUFFERED)
     val messages: Flow<SettingsMessage> = _messages.receiveAsFlow()

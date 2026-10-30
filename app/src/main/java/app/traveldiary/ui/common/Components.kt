@@ -16,8 +16,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -26,13 +27,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -130,34 +131,34 @@ fun CountryPickerDialog(countries: List<Country>, onDismiss: () -> Unit, onSelec
 }
 
 /**
- * Read-only text field that opens a date picker; the trailing button clears the date.
- * Whether the picker is open is up to the caller, so it can also open it without a tap.
- * Confirming a date closes the picker before calling [onDateChange], which may open another one.
+ * Read-only text field with a range of dates. A tap opens a calendar to pick both dates in one go:
+ * the first day tapped is the start, the second the end, and the days in between are highlighted.
+ * The end is optional; the trailing button clears both dates.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DateField(
+fun DateRangeField(
     label: String,
-    date: LocalDate?,
-    onDateChange: (LocalDate?) -> Unit,
-    pickerOpen: Boolean,
-    onPickerOpenChange: (Boolean) -> Unit,
+    start: LocalDate?,
+    end: LocalDate?,
+    onRangeChange: (start: LocalDate?, end: LocalDate?) -> Unit,
     modifier: Modifier = Modifier,
-    suggestedDate: LocalDate? = null,
+    pickerTitle: String = label,
 ) {
+    var pickerOpen by rememberSaveable { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
-    val currentOnPickerOpenChange by rememberUpdatedState(onPickerOpenChange)
     LaunchedEffect(interactionSource) {
-        interactionSource.interactions.collect { if (it is PressInteraction.Release) currentOnPickerOpenChange(true) }
+        interactionSource.interactions.collect { if (it is PressInteraction.Release) pickerOpen = true }
     }
     OutlinedTextField(
-        value = date?.let(::formatDate) ?: "",
+        value = formatDateRange(start, end) ?: "",
         onValueChange = {},
         readOnly = true,
         singleLine = true,
         label = { Text(label) },
         trailingIcon = {
-            if (date != null) {
-                IconButton(onClick = { onDateChange(null) }) {
+            if (start != null) {
+                IconButton(onClick = { onRangeChange(null, null) }) {
                     Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_clear_date))
                 }
             } else {
@@ -168,20 +169,38 @@ fun DateField(
         modifier = modifier,
     )
     if (pickerOpen) {
-        val pickerState = rememberDatePickerState(initialSelectedDateMillis = (date ?: suggestedDate)?.toPickerMillis())
+        val pickerState = rememberDateRangePickerState(
+            initialSelectedStartDateMillis = start?.toPickerMillis(),
+            // The picker refuses an end without a start.
+            initialSelectedEndDateMillis = if (start != null) end?.toPickerMillis() else null,
+        )
         DatePickerDialog(
-            onDismissRequest = { onPickerOpenChange(false) },
+            onDismissRequest = { pickerOpen = false },
             confirmButton = {
-                TextButton(onClick = {
-                    onPickerOpenChange(false)
-                    pickerState.selectedDateMillis?.let { onDateChange(pickerMillisToDate(it)) }
-                }) { Text(stringResource(R.string.action_ok)) }
+                TextButton(
+                    onClick = {
+                        pickerOpen = false
+                        onRangeChange(
+                            pickerState.selectedStartDateMillis?.let(::pickerMillisToDate),
+                            pickerState.selectedEndDateMillis?.let(::pickerMillisToDate),
+                        )
+                    },
+                    enabled = pickerState.selectedStartDateMillis != null,
+                ) { Text(stringResource(R.string.action_ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { onPickerOpenChange(false) }) { Text(stringResource(R.string.action_cancel)) }
+                TextButton(onClick = { pickerOpen = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         ) {
-            DatePicker(state = pickerState)
+            // The calendar scrolls through the months: it takes the room the dialog has left.
+            DateRangePicker(
+                state = pickerState,
+                title = {
+                    Text(pickerTitle, modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp))
+                },
+                showModeToggle = false,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }

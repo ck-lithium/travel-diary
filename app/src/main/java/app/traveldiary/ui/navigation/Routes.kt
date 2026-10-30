@@ -14,9 +14,21 @@ data object StatsRoute
 @Serializable
 data object SettingsRoute
 
-/** City search, optionally limited to one country. */
+/** Shown once, on the first launch, to ask where the user lives. */
 @Serializable
-data class SearchRoute(val countryCode: String? = null)
+data object WelcomeRoute
+
+/** City search, optionally limited to one country; with [forHome] the city picked becomes the user's home. */
+@Serializable
+data class SearchRoute(val countryCode: String? = null, val forHome: Boolean = false)
+
+/**
+ * Set or change the user's home. Exactly one way in:
+ * - [periodId]: edit that home period,
+ * - [cityId]: make a city picked in the search the home.
+ */
+@Serializable
+data class HomeEditorRoute(val periodId: Long? = null, val cityId: Long? = null)
 
 @Serializable
 data class PlaceRoute(val placeId: Long)

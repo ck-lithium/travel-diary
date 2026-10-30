@@ -19,6 +19,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -37,6 +38,9 @@ import app.traveldiary.AppContainer
 import app.traveldiary.R
 import app.traveldiary.ui.editor.VisitEditorScreen
 import app.traveldiary.ui.editor.VisitEditorViewModel
+import app.traveldiary.ui.home.HomeEditorScreen
+import app.traveldiary.ui.home.HomeEditorViewModel
+import app.traveldiary.ui.home.WelcomeHomeScreen
 import app.traveldiary.ui.map.MapScreen
 import app.traveldiary.ui.map.MapViewModel
 import app.traveldiary.ui.place.PlaceScreen
@@ -78,6 +82,14 @@ fun TravelDiaryNavHost(container: AppContainer) {
             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
             launchSingleTop = true
             restoreState = true
+        }
+    }
+
+    // Ask where the user lives on the very first launch only, not after every update.
+    LaunchedEffect(Unit) {
+        if (!container.settings.homeAsked) {
+            container.settings.markHomeAsked()
+            navController.navigate(WelcomeRoute)
         }
     }
 
@@ -126,8 +138,31 @@ fun TravelDiaryNavHost(container: AppContainer) {
                 SearchScreen(
                     viewModel = viewModel { SearchViewModel(container, route.countryCode) },
                     onBack = { navController.popBackStack() },
-                    onCitySelected = { cityId -> navController.navigate(VisitEditorRoute(cityId = cityId)) },
+                    onCitySelected = { cityId ->
+                        navController.navigate(
+                            if (route.forHome) HomeEditorRoute(cityId = cityId) else VisitEditorRoute(cityId = cityId),
+                        )
+                    },
                     onOpenSettings = { openTopLevel(TopLevelDestination.SETTINGS) },
+                )
+            }
+            composable<WelcomeRoute> {
+                WelcomeHomeScreen(
+                    onChooseHome = { navController.navigate(SearchRoute(forHome = true)) },
+                    onSkip = { navController.popBackStack() },
+                )
+            }
+            composable<HomeEditorRoute> { entry ->
+                val route = entry.toRoute<HomeEditorRoute>()
+                HomeEditorScreen(
+                    viewModel = viewModel { HomeEditorViewModel(container, route) },
+                    onClose = { navController.popBackStack() },
+                    onDone = {
+                        // Back to where it started: Settings, or the map after the welcome screen.
+                        if (!navController.popBackStack<SettingsRoute>(inclusive = false)) {
+                            navController.popBackStack<MapRoute>(inclusive = false)
+                        }
+                    },
                 )
             }
             composable<VisitEditorRoute> { entry ->
@@ -166,7 +201,11 @@ fun TravelDiaryNavHost(container: AppContainer) {
                 StatsScreen(viewModel = viewModel { StatsViewModel(container) })
             }
             composable<SettingsRoute> {
-                SettingsScreen(viewModel = viewModel { SettingsViewModel(container) })
+                SettingsScreen(
+                    viewModel = viewModel { SettingsViewModel(container) },
+                    onAddHome = { navController.navigate(SearchRoute(forHome = true)) },
+                    onEditHome = { periodId -> navController.navigate(HomeEditorRoute(periodId = periodId)) },
+                )
             }
         }
     }

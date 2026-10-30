@@ -18,11 +18,13 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.AddHome
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Gavel
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationCity
 import androidx.compose.material.icons.outlined.Lock
@@ -65,6 +67,7 @@ import app.traveldiary.data.cities.CityImportState
 import app.traveldiary.data.cities.InstalledCities
 import app.traveldiary.ui.common.SectionHeader
 import app.traveldiary.ui.common.formatDate
+import app.traveldiary.ui.common.formatDateRange
 import app.traveldiary.ui.common.formatNumber
 import java.time.Instant
 import java.time.LocalDate
@@ -78,10 +81,11 @@ private const val GEONAMES_URL = "https://www.geonames.org"
 private const val FLAG_ICONS_URL = "https://github.com/lipis/flag-icons"
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel) {
+fun SettingsScreen(viewModel: SettingsViewModel, onAddHome: () -> Unit, onEditHome: (periodId: Long) -> Unit) {
     val installed by viewModel.installed.collectAsStateWithLifecycle()
     val importState by viewModel.importState.collectAsStateWithLifecycle()
     val flagMap by viewModel.flagMap.collectAsStateWithLifecycle()
+    val homes by viewModel.homes.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var pendingImport by rememberSaveable { mutableStateOf<Uri?>(null) }
@@ -101,6 +105,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         installed = installed,
         importState = importState,
         flagMap = flagMap,
+        homes = homes,
+        onAddHome = onAddHome,
+        onEditHome = onEditHome,
         snackbarHostState = snackbarHostState,
         onFlagMapChange = viewModel::setFlagMap,
         onInstall = viewModel::install,
@@ -143,6 +150,9 @@ fun SettingsScreenContent(
     installed: InstalledCities?,
     importState: CityImportState,
     flagMap: Boolean,
+    homes: List<HomeRow>,
+    onAddHome: () -> Unit,
+    onEditHome: (periodId: Long) -> Unit,
     snackbarHostState: SnackbarHostState,
     onFlagMapChange: (Boolean) -> Unit,
     onInstall: (CityDataset) -> Unit,
@@ -164,6 +174,33 @@ fun SettingsScreenContent(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 16.dp),
         ) {
+            SectionHeader(stringResource(R.string.settings_home_title))
+            homes.forEach { home ->
+                ListItem(
+                    headlineContent = { Text(home.placeName) },
+                    supportingContent = {
+                        Text(
+                            if (home.endDate == null) {
+                                stringResource(R.string.home_since, formatDate(home.startDate))
+                            } else {
+                                formatDateRange(home.startDate, home.endDate).orEmpty()
+                            },
+                        )
+                    },
+                    leadingContent = { Icon(Icons.Outlined.Home, contentDescription = null) },
+                    modifier = Modifier.clickable { onEditHome(home.periodId) },
+                )
+            }
+            ListItem(
+                headlineContent = {
+                    Text(stringResource(if (homes.isEmpty()) R.string.settings_home_set else R.string.settings_home_add))
+                },
+                supportingContent = { Text(stringResource(R.string.settings_home_description)) },
+                leadingContent = { Icon(Icons.Outlined.AddHome, contentDescription = null) },
+                modifier = Modifier.clickable(onClick = onAddHome),
+            )
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionHeader(stringResource(R.string.settings_map_title))
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_flag_map)) },

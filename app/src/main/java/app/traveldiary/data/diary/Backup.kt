@@ -26,6 +26,16 @@ data class BackupPlace(
     val longitude: Double,
     val createdAt: Long = 0,
     val visits: List<BackupVisit> = emptyList(),
+    /** Missing in backups made before homes existed. */
+    val homePeriods: List<BackupHomePeriod> = emptyList(),
+)
+
+@Serializable
+data class BackupHomePeriod(
+    /** ISO date, e.g. 2024-05-12. */
+    val startDate: String,
+    val endDate: String? = null,
+    val createdAt: Long = 0,
 )
 
 @Serializable
@@ -75,6 +85,10 @@ object DiaryBackup {
                 parseDate(visit.startDate)
                 parseDate(visit.endDate)
             }
+            place.homePeriods.forEach { period ->
+                parseDate(period.startDate)
+                parseDate(period.endDate)
+            }
         }
         return file.places
     }
@@ -95,6 +109,13 @@ object DiaryBackup {
                 createdAt = visit.createdAt,
             )
         },
+        homePeriods = homePeriods.sortedBy { it.id }.map { period ->
+            BackupHomePeriod(
+                startDate = period.startDate.toString(),
+                endDate = period.endDate?.toString(),
+                createdAt = period.createdAt,
+            )
+        },
     )
 
     internal fun parseDate(value: String?): LocalDate? = try {
@@ -111,6 +132,13 @@ internal fun BackupPlace.toEntity() = PlaceEntity(
     countryCode = countryCode,
     latitude = latitude,
     longitude = longitude,
+    createdAt = createdAt,
+)
+
+internal fun BackupHomePeriod.toEntity(placeId: Long) = HomePeriodEntity(
+    placeId = placeId,
+    startDate = checkNotNull(DiaryBackup.parseDate(startDate)),
+    endDate = DiaryBackup.parseDate(endDate),
     createdAt = createdAt,
 )
 

@@ -95,34 +95,33 @@ data class GravityTimeline(
         val Empty = GravityTimeline(null, null, 0, GravityTrajectory(), 0)
 
         /**
-         * Calculates the mobile average center of gravity across time from dated visits.
+         * Calculates the mobile average center of gravity across time from dated visits and, for
+         * the days no visit covers, the user's home. Home days stop at [today].
          * Positions are averaged on the 3D unit sphere to preserve true spherical geometry and
          * avoid distortion near the poles or across the 180° antimeridian.
          */
-        fun compute(places: List<PlaceWithVisits>, period: GravityPeriod): GravityTimeline {
+        fun compute(
+            places: List<PlaceWithVisits>,
+            period: GravityPeriod,
+            today: LocalDate = LocalDate.now(),
+        ): GravityTimeline {
             // Collect all dated daily samples: each day a user was at a place contributes one sample.
-            val samples = places.flatMap { placeWithVisits ->
+            val visitSamples = places.flatMap { placeWithVisits ->
                 placeWithVisits.visits.flatMap { visit ->
                     val start = visit.startDate ?: return@flatMap emptyList()
                     val end = maxOf(visit.endDate ?: start, start)
                     val days = ChronoUnit.DAYS.between(start, end).toInt()
-                    val latRad = Math.toRadians(placeWithVisits.place.latitude)
-                    val lonRad = Math.toRadians(placeWithVisits.place.longitude)
-                    val x = cos(latRad) * cos(lonRad)
-                    val y = cos(latRad) * sin(lonRad)
-                    val z = sin(latRad)
-                    (0..days).map { dayOffset ->
-                        DatedSample(
-                            date = start.plusDays(dayOffset.toLong()),
-                            latitude = placeWithVisits.place.latitude,
-                            longitude = placeWithVisits.place.longitude,
-                            x = x,
-                            y = y,
-                            z = z,
-                        )
-                    }
+                    (0..days).map { dayOffset -> DatedSample.at(placeWithVisits, start.plusDays(dayOffset.toLong())) }
                 }
-            }.sortedBy { it.date }
+            }
+            // Days at home count only when no trip took the user somewhere else.
+            val travelDays = visitSamples.mapTo(HashSet()) { it.date }
+            val homeSamples = places.flatMap { placeWithVisits ->
+                placeWithVisits.homePeriods.flatMap { home ->
+                    home.daysUntil(today).filter { it !in travelDays }.map { DatedSample.at(placeWithVisits, it) }.toList()
+                }
+            }
+            val samples = (visitSamples + homeSamples).sortedBy { it.date }
 
             if (samples.isEmpty()) return Empty
 
@@ -144,18 +143,19 @@ data class GravityTimeline(
                     endDate = endDate,
                     totalDays = 0,
                     trajectory = GravityTrajectory(points = listOf(point), segments = emptyList()),
-                    activePlacesCount = places.count { it.visits.any { v -> v.startDate != null } },
+                    activePlacesCount = places.count { it.isHome || it.visits.any { v -> v.startDate != null } },
                 )
             }
 
             // Generate dense sample dates along the span, plus explicit visit dates to capture turning points.
+            // Home days are not added one by one: years at home would make the timeline very slow.
             val denseStepCount = maxOf(60, minOf(365, totalDays))
             val dateSet = sortedSetOf<LocalDate>()
             for (i in 0 until denseStepCount) {
                 val offset = (i.toDouble() / (denseStepCount - 1) * totalDays).roundToLong()
                 dateSet.add(startDate.plusDays(offset))
             }
-            samples.forEach { dateSet.add(it.date) }
+            visitSamples.forEach { dateSet.add(it.date) }
             val dates = dateSet.toList()
 
             // Calculate center of gravity for each sample date.
@@ -187,7 +187,7 @@ data class GravityTimeline(
                 endDate = endDate,
                 totalDays = totalDays,
                 trajectory = GravityTrajectory(points, segments),
-                activePlacesCount = places.count { it.visits.any { v -> v.startDate != null } },
+                activePlacesCount = places.count { it.isHome || it.visits.any { v -> v.startDate != null } },
             )
         }
 
@@ -292,5 +292,23 @@ private data class DatedSample(
     val x: Double,
     val y: Double,
     val z: Double,
-)
+) {
+    companion object {
+        /** The user at [place] on [date], with its position on the unit sphere. */
+        fun at(place: PlaceWithVisits, date: LocalDate): DatedSample {
+            val latitude = place.place.latitude
+            val longitude = place.place.longitude
+            val latRad = Math.toRadians(latitude)
+            val lonRad = Math.toRadians(longitude)
+            return DatedSample(
+                date = date,
+                latitude = latitude,
+                longitude = longitude,
+                x = cos(latRad) * cos(lonRad),
+                y = cos(latRad) * sin(lonRad),
+                z = sin(latRad),
+            )
+        }
+    }
+}
 

@@ -3,6 +3,8 @@ package app.traveldiary.map
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -12,9 +14,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -24,7 +30,7 @@ import app.traveldiary.ui.theme.LocalMapColors
 
 /** A place on the map, in map units. */
 @Immutable
-data class MapPin(val id: Long, val position: Offset)
+data class MapPin(val id: Long, val position: Offset, val isHome: Boolean = false)
 
 /**
  * The world map: visited countries filled, with their flag when it is in [flags], places shown as
@@ -56,6 +62,9 @@ fun WorldMap(
         map?.flagFills(flags.filterKeys { it in visitedCountries }).orEmpty()
     }
     val selectedPath = remember(map, selectedCountry) { selectedCountry?.let { map?.path(it) } }
+    val sortedPins = remember(pins) { pins.sortedBy { it.isHome } }
+    val homeIcon = rememberVectorPainter(Icons.Filled.Home)
+    val homeTint = remember(colors.pinBorder) { ColorFilter.tint(colors.pinBorder) }
 
     // The gesture detectors are installed once; let them see the latest values.
     val currentMap by rememberUpdatedState(map)
@@ -163,10 +172,12 @@ fun WorldMap(
             }
         }
 
-        // Pins keep the same size at every zoom level.
-        val radius = 5.dp.toPx()
+        // Pins keep the same size at every zoom level. Homes are bigger, with a house inside,
+        // and drawn last so other pins never hide them.
         val ring = 1.5.dp.toPx()
-        for (pin in pins) {
+        val homeIconSize = 12.dp.toPx()
+        for (pin in sortedPins) {
+            val radius = (if (pin.isHome) 9.dp else 5.dp).toPx()
             val y = offset.y + pin.position.y * scale
             if (y < -radius || y > size.height + radius) continue
             var x = offset.x + pin.position.x * scale - worldWidthPx
@@ -174,6 +185,11 @@ fun WorldMap(
                 if (x > -radius) {
                     drawCircle(colors.pinBorder, radius + ring, Offset(x, y))
                     drawCircle(colors.pin, radius, Offset(x, y))
+                    if (pin.isHome) {
+                        translate(x - homeIconSize / 2, y - homeIconSize / 2) {
+                            with(homeIcon) { draw(Size(homeIconSize, homeIconSize), colorFilter = homeTint) }
+                        }
+                    }
                 }
                 x += worldWidthPx
             }
