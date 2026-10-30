@@ -153,8 +153,30 @@
     <string name="stats_continent_visited">Visited</string>
     <string name="stats_continent_not_visited">Not yet</string>
 
+    <!-- Home -->
+    <string name="home_icon_description">Home</string>
+    <string name="home_since">Since %1$s</string>
+    <string name="welcome_home_title">Where do you live?</string>
+    <string name="welcome_home_message">Set your home and you only need to add your trips: the days in between count as spent at home. You can change it any time in Settings.</string>
+    <string name="welcome_home_choose">Choose my home</string>
+    <string name="welcome_home_skip">Skip</string>
+    <string name="home_editor_title_new">Your home</string>
+    <string name="home_editor_title_edit">Edit home</string>
+    <string name="home_editor_when">When do you live there?</string>
+    <string name="home_editor_dates">Living here</string>
+    <string name="home_editor_dates_help">Tap the day you moved in, then the day you moved out. Leave the second one out if you still live there.</string>
+    <string name="home_editor_explanation">Add only your trips away from home: every other day of this period counts as spent here, for example in the center of gravity.</string>
+    <string name="home_editor_error_start_missing">Choose when you moved in</string>
+    <string name="home_editor_delete">Remove home</string>
+    <string name="home_editor_delete_title">Remove this home?</string>
+    <string name="home_editor_delete_message">The visits you added to this place are kept.</string>
+
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_home_title">Home</string>
+    <string name="settings_home_set">Set your home</string>
+    <string name="settings_home_add">Add another home</string>
+    <string name="settings_home_description">The days between your trips count as spent at home</string>
     <string name="settings_map_title">Map</string>
     <string name="settings_flag_map">Flags on the map</string>
     <string name="settings_flag_map_description">Paint the countries you have visited with their flag</string>

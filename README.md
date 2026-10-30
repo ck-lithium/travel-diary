@@ -27,7 +27,11 @@ light up on a world map, and keep notes about each trip. Everything stays on you
   every capital, including the smallest countries). Bigger lists with up to 236,000 towns and
   villages can be downloaded from [GeoNames](https://www.geonames.org) in Settings.
 - **A diary for each place**: several visits per place, each with optional arrival and departure
-  dates and notes. Browse them by country or on a timeline.
+  dates, picked together in one calendar, and notes. Browse them by country or on a timeline.
+- **Your home**: tell the app where you live (it asks once, on the first launch, or later in
+  Settings) and add only your trips: the days in between count as spent at home, for example in
+  the center of gravity. Homes have a little house on the map, and you can add a new one when you
+  move.
 - **A photo for each place**: pick one from your gallery and it becomes the background of the
   place's page. The app keeps its own scaled-down copy, so deleting the original changes nothing.
 - **Places that are not in any list**: long-press anywhere on the map to drop your own pin, for

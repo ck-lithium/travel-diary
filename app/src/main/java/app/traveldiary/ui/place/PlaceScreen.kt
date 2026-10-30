@@ -227,7 +227,7 @@ fun PlaceScreenContent(
                             map = map,
                             state = rememberMapViewportState(MapFocus.Point(position, zoom = 10f)),
                             visitedCountries = setOf(details.countryCode),
-                            pins = listOf(MapPin(details.id, position)),
+                            pins = listOf(MapPin(details.id, position, isHome = place.isHome)),
                             interactive = false,
                             modifier = Modifier.fillMaxSize(),
                         )

@@ -14,7 +14,14 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-data class PlaceRow(val id: Long, val name: String, val region: String?, val visits: Int, val lastVisit: LocalDate?)
+data class PlaceRow(
+    val id: Long,
+    val name: String,
+    val region: String?,
+    val visits: Int,
+    val lastVisit: LocalDate?,
+    val isHome: Boolean = false,
+)
 
 data class CountryGroup(val code: String, val name: String, val places: List<PlaceRow>)
 
@@ -54,7 +61,7 @@ fun placesUiState(places: List<PlaceWithVisits>, countryName: (String) -> String
                 code = code,
                 name = countryName(code),
                 places = countryPlaces
-                    .map { PlaceRow(it.place.id, it.place.name, it.place.region, it.visits.size, it.lastVisitDate) }
+                    .map { PlaceRow(it.place.id, it.place.name, it.place.region, it.visits.size, it.lastVisitDate, it.isHome) }
                     .sortedWith(compareBy(collator) { it.name }),
             )
         }

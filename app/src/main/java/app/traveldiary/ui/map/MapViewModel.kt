@@ -70,7 +70,9 @@ fun mapUiState(
     return MapUiState(
         loaded = true,
         places = places,
-        pins = places.map { MapPin(it.place.id, MillerProjection.position(it.place.latitude, it.place.longitude)) },
+        pins = places.map {
+            MapPin(it.place.id, MillerProjection.position(it.place.latitude, it.place.longitude), isHome = it.isHome)
+        },
         visitedCountries = visited,
         worldShare = if (unMembers.isEmpty()) 0f else unMembers.count { it.code in visited }.toFloat() / unMembers.size,
         gravityTimeline = GravityTimeline.compute(places, period),

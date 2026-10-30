@@ -55,6 +55,30 @@ interface DiaryDao {
     @Query("DELETE FROM places WHERE id = :id")
     suspend fun deletePlace(id: Long)
 
+    @Query("SELECT * FROM home_periods WHERE id = :id")
+    suspend fun getHomePeriod(id: Long): HomePeriodEntity?
+
+    @Insert
+    suspend fun insertHomePeriod(period: HomePeriodEntity): Long
+
+    @Update
+    suspend fun updateHomePeriod(period: HomePeriodEntity)
+
+    @Query("DELETE FROM home_periods WHERE id = :id")
+    suspend fun deleteHomePeriod(id: Long)
+
+    @Query("DELETE FROM home_periods WHERE placeId = :placeId")
+    suspend fun deleteHomePeriodsOfPlace(placeId: Long)
+
+    @Query("SELECT COUNT(*) FROM visits WHERE placeId = :placeId")
+    suspend fun countVisits(placeId: Long): Int
+
+    @Query("SELECT COUNT(*) FROM home_periods WHERE placeId = :placeId")
+    suspend fun countHomePeriods(placeId: Long): Int
+
+    @Query("DELETE FROM home_periods")
+    suspend fun deleteAllHomePeriods()
+
     @Query("DELETE FROM visits")
     suspend fun deleteAllVisits()
 

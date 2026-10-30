@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.Button
@@ -125,7 +126,11 @@ private fun CountryList(countries: List<CountryGroup>, onOpenPlace: (Long) -> Un
                         Text(listOfNotNull(row.region, visits, row.lastVisit?.let(::formatDate)).joinToString(" · "))
                     },
                     leadingContent = {
-                        Icon(Icons.Filled.Place, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
+                        Icon(
+                            if (row.isHome) Icons.Filled.Home else Icons.Filled.Place,
+                            contentDescription = if (row.isHome) stringResource(R.string.home_icon_description) else null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                        )
                     },
                     trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
                     modifier = Modifier.clickable { onOpenPlace(row.id) },
