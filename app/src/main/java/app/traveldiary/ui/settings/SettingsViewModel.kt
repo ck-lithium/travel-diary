@@ -35,8 +35,12 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     val importState: StateFlow<CityImportState> = container.cities.importState
 
+    val flagMap: StateFlow<Boolean> = container.settings.flagMap
+
     private val _messages = Channel<SettingsMessage>(Channel.BUFFERED)
     val messages: Flow<SettingsMessage> = _messages.receiveAsFlow()
+
+    fun setFlagMap(enabled: Boolean) = container.settings.setFlagMap(enabled)
 
     fun install(dataset: CityDataset) = container.cities.install(dataset)
 

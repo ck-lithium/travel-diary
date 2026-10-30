@@ -12,6 +12,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
@@ -26,8 +27,9 @@ import app.traveldiary.ui.theme.LocalMapColors
 data class MapPin(val id: Long, val position: Offset)
 
 /**
- * The world map: visited countries filled, places shown as pins. Drag to pan, pinch or
- * double-tap to zoom, tap a country or a pin, long-press to pick a position.
+ * The world map: visited countries filled, with their flag when it is in [flags], places shown as
+ * pins. Drag to pan, pinch or double-tap to zoom, tap a country or a pin, long-press to pick a
+ * position.
  */
 @Composable
 fun WorldMap(
@@ -36,6 +38,7 @@ fun WorldMap(
     visitedCountries: Set<String>,
     pins: List<MapPin>,
     modifier: Modifier = Modifier,
+    flags: Map<String, ImageBitmap> = emptyMap(),
     selectedCountry: String? = null,
     interactive: Boolean = true,
     gravityTrajectory: GravityTrajectory? = null,
@@ -49,6 +52,9 @@ fun WorldMap(
     val scope = rememberCoroutineScope()
     val pinTouchRadius = with(LocalDensity.current) { 24.dp.toPx() }
     val visitedPath = remember(map, visitedCountries) { map?.pathOf(visitedCountries) }
+    val flagFills = remember(map, visitedCountries, flags) {
+        map?.flagFills(flags.filterKeys { it in visitedCountries }).orEmpty()
+    }
     val selectedPath = remember(map, selectedCountry) { selectedCountry?.let { map?.path(it) } }
 
     // The gesture detectors are installed once; let them see the latest values.
@@ -103,6 +109,7 @@ fun WorldMap(
             }) {
                 drawPath(map.land, colors.land)
                 visitedPath?.let { drawPath(it, colors.visited) }
+                flagFills.forEach { drawPath(it.path, it.brush) }
                 selectedPath?.let { drawPath(it, colors.selection) }
                 drawPath(map.land, colors.border, style = Stroke(width = Stroke.HairlineWidth))
                 selectedPath?.let { drawPath(it, colors.selectionBorder, style = Stroke(width = 2.dp.toPx() / scale)) }

@@ -156,6 +156,10 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_map_title">Map</string>
+    <string name="settings_flag_map">Flags on the map</string>
+    <string name="settings_flag_map_description">Paint the countries you have visited with their flag</string>
+
     <string name="settings_cities_title">City database</string>
     <string name="settings_cities_description">City search works offline with a local copy of GeoNames. Download a bigger list to find smaller towns and villages. Your diary is not affected when you switch.</string>
     <string name="settings_cities_installed">In use: %1$s</string>
@@ -202,8 +206,12 @@
     <string name="settings_privacy">Private by design</string>
     <string name="settings_privacy_description">No account, no ads, no tracking. Your diary stays on this device; the app only goes online to download a city database when you ask.</string>
     <string name="settings_source_code">Source code</string>
+    <string name="settings_license">License</string>
+    <string name="settings_license_description">Free software under the GNU General Public License, version 3 or later</string>
     <string name="settings_map_data">Map data</string>
     <string name="settings_map_data_description">Natural Earth (public domain)</string>
     <string name="settings_city_data">City data</string>
     <string name="settings_city_data_description">GeoNames (geonames.org), licensed under CC BY 4.0</string>
+    <string name="settings_flag_data">Flags</string>
+    <string name="settings_flag_data_description">flag-icons by Panayiotis Lipiridis, MIT License</string>
 </resources>

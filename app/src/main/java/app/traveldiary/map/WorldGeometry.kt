@@ -5,13 +5,16 @@ import java.nio.ByteBuffer
 
 /** Outline of one country in map units: a list of rings (islands and holes) as x,y pairs. */
 class CountryGeometry(val code: String, val rings: List<FloatArray>) {
+    /** Bounds of each ring, in the order of [rings]. */
+    val ringBounds: List<Rect>
+
     val bounds: Rect
 
     /** Bounds of the largest part, to zoom on a country without its far-away islands. */
     val mainBounds: Rect
 
     init {
-        val ringBounds = rings.map(::boundsOf)
+        ringBounds = rings.map(::boundsOf)
         bounds = Rect(
             left = ringBounds.minOf { it.left },
             top = ringBounds.minOf { it.top },

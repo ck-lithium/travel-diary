@@ -17,6 +17,8 @@ light up on a world map, and keep notes about each trip. Everything stays on you
 - **World map home screen**: visited countries are highlighted and every place gets a pin.
   Drag, pinch or double-tap to zoom; the map wraps around the globe. Tap a country to see your
   places there or add one.
+- **Flags on the map**: turn it on in Settings to paint every country you have visited with its
+  flag instead of a single colour.
 - **Center of gravity over time**: view your travels with a concept of time. A moving average
   (with configurable period: 30 days, 90 days, 180 days, 1 year, or all time) calculates your
   spherical center of gravity across time, drawing an animated line across the globe with interactive
@@ -92,8 +94,11 @@ app/src/main/java/app/traveldiary/
   map/             projection, country shapes, the zoomable map composable
   ui/              one package per screen (map, search, editor, place, places, stats, settings)
 tools/build_assets.py           regenerates the bundled map and city data
+tools/build_flags.sh            renders the bundled flag images (needs rsvg-convert and ImageMagick)
 scripts/create-release-key.sh   creates the release signing key
 ```
+
+Contributions are welcome: please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 ## Releasing
 
@@ -142,4 +147,16 @@ and run `./gradlew assembleRelease -PappVersion=1.0.0`.
 - Country shapes: [Natural Earth](https://www.naturalearthdata.com), public domain.
 - Cities, regions and countries: [GeoNames](https://www.geonames.org), licensed under
   [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- Flags: [flag-icons](https://github.com/lipis/flag-icons) by Panayiotis Lipiridis, MIT License
+  (see `app/src/main/assets/flags/LICENSE`).
 - Inspired by Pin Traveller on iOS.
+
+## License
+
+Copyright (C) 2026 Patrick Cerka and the Travel Diary contributors.
+
+Travel Diary is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version. It is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the [GNU General Public License](LICENSE) for more details.

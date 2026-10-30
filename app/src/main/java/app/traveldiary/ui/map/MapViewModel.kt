@@ -1,5 +1,6 @@
 package app.traveldiary.ui.map
 
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.traveldiary.AppContainer
@@ -16,7 +17,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 data class MapUiState(
@@ -42,6 +45,13 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
     }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MapUiState())
+
+    /** Flags of the visited countries when the flag map is on, otherwise none. */
+    val flags: StateFlow<Map<String, ImageBitmap>> = combine(
+        container.diary.places.map { places -> places.mapTo(HashSet()) { it.place.countryCode } }.distinctUntilChanged(),
+        container.settings.flagMap,
+    ) { visited, enabled -> container.flags.load(if (enabled) visited else emptySet()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     fun setGravityPeriod(period: GravityPeriod) {
         _gravityPeriod.value = period
