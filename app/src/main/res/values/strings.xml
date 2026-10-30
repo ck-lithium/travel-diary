@@ -86,9 +86,8 @@
     <string name="editor_title_edit_visit">Edit visit</string>
     <string name="editor_already_visited">You have been here before: this adds another visit.</string>
     <string name="editor_when">When were you there?</string>
-    <string name="editor_arrival">Arrival</string>
-    <string name="editor_departure">Departure</string>
-    <string name="editor_dates_optional">Both dates are optional.</string>
+    <string name="editor_dates">Dates</string>
+    <string name="editor_dates_optional">Tap the arrival day, then the departure day. Dates are optional.</string>
     <string name="editor_notes">Notes</string>
     <string name="editor_notes_hint">What did you see, eat, discover?</string>
     <string name="editor_place_name">Place name</string>

@@ -43,19 +43,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.traveldiary.R
 import app.traveldiary.ui.common.CountryPickerDialog
-import app.traveldiary.ui.common.DateField
+import app.traveldiary.ui.common.DateRangeField
 import app.traveldiary.ui.common.Flag
 import app.traveldiary.ui.common.formatCoordinates
-
-/** The editor's date picker that is open, if any. */
-private enum class StayDate { ARRIVAL, DEPARTURE }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VisitEditorScreen(viewModel: VisitEditorViewModel, onClose: () -> Unit, onSaved: (placeId: Long) -> Unit) {
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var pickCountry by rememberSaveable { mutableStateOf(false) }
-    var openDatePicker by rememberSaveable { mutableStateOf<StayDate?>(null) }
 
     Scaffold(
         topBar = {
@@ -138,29 +134,17 @@ fun VisitEditorScreen(viewModel: VisitEditorViewModel, onClose: () -> Unit, onSa
             }
 
             Text(stringResource(R.string.editor_when), style = MaterialTheme.typography.titleSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                DateField(
-                    label = stringResource(R.string.editor_arrival),
-                    date = viewModel.startDate,
-                    onDateChange = { date ->
-                        viewModel.startDate = date
-                        // Go straight on to the departure, without another tap.
-                        if (date != null) openDatePicker = StayDate.DEPARTURE
-                    },
-                    pickerOpen = openDatePicker == StayDate.ARRIVAL,
-                    onPickerOpenChange = { open -> openDatePicker = if (open) StayDate.ARRIVAL else null },
-                    modifier = Modifier.weight(1f),
-                )
-                DateField(
-                    label = stringResource(R.string.editor_departure),
-                    date = viewModel.endDate,
-                    onDateChange = { viewModel.endDate = it },
-                    pickerOpen = openDatePicker == StayDate.DEPARTURE,
-                    onPickerOpenChange = { open -> openDatePicker = if (open) StayDate.DEPARTURE else null },
-                    suggestedDate = viewModel.startDate,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            DateRangeField(
+                label = stringResource(R.string.editor_dates),
+                start = viewModel.startDate,
+                end = viewModel.endDate,
+                onRangeChange = { start, end ->
+                    viewModel.startDate = start
+                    viewModel.endDate = end
+                },
+                pickerTitle = stringResource(R.string.editor_when),
+                modifier = Modifier.fillMaxWidth(),
+            )
             Text(
                 stringResource(R.string.editor_dates_optional),
                 style = MaterialTheme.typography.bodySmall,
