@@ -114,6 +114,7 @@
     <string name="place_remove_photo_title">Remove the photo?</string>
     <string name="place_remove_photo_message">It will be deleted from your diary. The original stays in your gallery.</string>
     <string name="place_photo_failed">This photo could not be added</string>
+    <string name="editor_photo_hint">Optional. It becomes the background of the place\'s page</string>
     <string name="place_no_visits">No visits recorded yet.</string>
     <plurals name="place_visits">
         <item quantity="one">%d visit</item>

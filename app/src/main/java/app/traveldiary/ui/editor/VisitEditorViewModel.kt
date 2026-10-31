@@ -1,5 +1,6 @@
 package app.traveldiary.ui.editor
 
+import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,6 +14,7 @@ import app.traveldiary.data.countries.Country
 import app.traveldiary.data.diary.PlaceEntity
 import app.traveldiary.data.diary.VisitDraft
 import app.traveldiary.ui.navigation.VisitEditorRoute
+import java.io.File
 import java.time.LocalDate
 import kotlinx.coroutines.launch
 
@@ -63,6 +65,18 @@ class VisitEditorViewModel(private val container: AppContainer, private val rout
     val longitude: Double = route.longitude ?: 0.0
     val countries: List<Country> get() = container.countries.all
 
+    /** File name of the photo picked for a new place, already copied into the diary; linked when saving. */
+    var photo by mutableStateOf<String?>(null)
+        private set
+    var savingPhoto by mutableStateOf(false)
+        private set
+    var photoFailed by mutableStateOf(false)
+        private set
+
+    /** Only a place created here can get its photo here: an existing one keeps its own. */
+    val canAddPhoto: Boolean
+        get() = mode == EditorMode.CUSTOM_PLACE || (mode == EditorMode.NEW_PLACE && !alreadyVisited)
+
     private var city: CityEntity? = null
     private var saving = false
 
@@ -107,8 +121,37 @@ class VisitEditorViewModel(private val container: AppContainer, private val rout
         }
     }
 
+    fun photoFile(name: String): File = container.photos.file(name)
+
+    fun pickPhoto(source: Uri) {
+        viewModelScope.launch {
+            savingPhoto = true
+            photoFailed = false
+            val saved = runCatching { container.photos.save(source) }.getOrNull()
+            savingPhoto = false
+            if (saved == null) {
+                photoFailed = true
+            } else {
+                // A second pick replaces the first one.
+                container.photos.delete(photo)
+                photo = saved
+            }
+        }
+    }
+
+    fun removePhoto() {
+        val removed = photo ?: return
+        photo = null
+        viewModelScope.launch { container.photos.delete(removed) }
+    }
+
+    override fun onCleared() {
+        // Closed without saving: the copy of the picked photo belongs to no place.
+        photo?.let { unused -> container.scope.launch { container.photos.delete(unused) } }
+    }
+
     fun save(onSaved: (placeId: Long) -> Unit) {
-        if (loading || saving || validationError == EditorError.NOT_FOUND) return
+        if (loading || saving || savingPhoto || validationError == EditorError.NOT_FOUND) return
         // A departure date alone is simply the date of the visit.
         val start = startDate ?: endDate
         val end = if (startDate == null) null else endDate
@@ -138,6 +181,11 @@ class VisitEditorViewModel(private val container: AppContainer, private val rout
                 EditorMode.NEW_PLACE -> diary.addVisit(checkNotNull(city), draft)
                 EditorMode.CUSTOM_PLACE ->
                     diary.addCustomPlace(customName, checkNotNull(customCountry).code, latitude, longitude, draft)
+            }
+            photo?.let { picked ->
+                diary.attachPlacePhoto(placeId, picked)
+                // It belongs to the place now: closing the editor must not delete it.
+                photo = null
             }
             onSaved(placeId)
         }

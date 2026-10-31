@@ -124,6 +124,9 @@ class DiaryRepository(
 
     suspend fun removePlacePhoto(placeId: Long) = replacePlacePhoto(placeId, null)
 
+    /** Gives the place a photo already copied by [PlacePhotos.save], e.g. picked before the place existed. */
+    suspend fun attachPlacePhoto(placeId: Long, photo: String) = replacePlacePhoto(placeId, photo)
+
     private suspend fun replacePlacePhoto(placeId: Long, photo: String?) {
         val previous = database.withTransaction {
             dao.getPlace(placeId)?.also { dao.updatePlacePhoto(placeId, photo) }

@@ -220,5 +220,17 @@ class DiaryRepositoryTest {
         assertEquals(LocalDate.of(2025, 12, 31), period.endDate)
     }
 
+    @Test
+    fun photoPickedBeforeTheSaveGoesToTheNewPlace() = runBlocking {
+        // The editor copies the photo first, then creates the place and attaches it.
+        val photo = photos.save(folder.jpeg(width = 400, height = 300))
+        val placeId = diary.addVisit(paris, june)
+
+        diary.attachPlacePhoto(placeId, photo)
+
+        assertEquals(photo, diary.places.first().single().place.photo)
+        assertEquals(setOf(photo), storedPhotos())
+    }
+
     private fun storedPhotos(): Set<String> = photoDirectory.list().orEmpty().toSet()
 }
