@@ -4,8 +4,12 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -14,9 +18,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.AddHome
 import androidx.compose.material.icons.outlined.Code
@@ -28,6 +36,7 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationCity
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -54,10 +63,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.traveldiary.BuildConfig
@@ -69,6 +81,7 @@ import app.traveldiary.ui.common.SectionHeader
 import app.traveldiary.ui.common.formatDate
 import app.traveldiary.ui.common.formatDateRange
 import app.traveldiary.ui.common.formatNumber
+import app.traveldiary.ui.theme.RangeColor
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -85,6 +98,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onAddHome: () -> Unit, onEditHo
     val installed by viewModel.installed.collectAsStateWithLifecycle()
     val importState by viewModel.importState.collectAsStateWithLifecycle()
     val flagMap by viewModel.flagMap.collectAsStateWithLifecycle()
+    val rangeColor by viewModel.rangeColor.collectAsStateWithLifecycle()
     val homes by viewModel.homes.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -105,6 +119,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onAddHome: () -> Unit, onEditHo
         installed = installed,
         importState = importState,
         flagMap = flagMap,
+        rangeColor = rangeColor,
+        onRangeColorChange = viewModel::setRangeColor,
         homes = homes,
         onAddHome = onAddHome,
         onEditHome = onEditHome,
@@ -150,6 +166,8 @@ fun SettingsScreenContent(
     installed: InstalledCities?,
     importState: CityImportState,
     flagMap: Boolean,
+    rangeColor: RangeColor,
+    onRangeColorChange: (RangeColor) -> Unit,
     homes: List<HomeRow>,
     onAddHome: () -> Unit,
     onEditHome: (periodId: Long) -> Unit,
@@ -209,6 +227,15 @@ fun SettingsScreenContent(
                 trailingContent = { Switch(checked = flagMap, onCheckedChange = null) },
                 modifier = Modifier.toggleable(value = flagMap, role = Role.Switch, onValueChange = onFlagMapChange),
             )
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            SectionHeader(stringResource(R.string.settings_calendar_title))
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_range_color)) },
+                supportingContent = { Text(stringResource(R.string.settings_range_color_description)) },
+                leadingContent = { Icon(Icons.Outlined.Palette, contentDescription = null) },
+            )
+            RangeColorPicker(rangeColor, onRangeColorChange)
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionHeader(stringResource(R.string.settings_cities_title))
@@ -421,6 +448,43 @@ private fun ProgressCard(title: String, detail: String, progress: Float?, onCanc
                 )
                 if (onCancel != null) {
                     TextButton(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
+                }
+            }
+        }
+    }
+}
+
+/** One swatch per tint: the colour of the days in between, with the arrival and departure colour inside. */
+@Composable
+private fun RangeColorPicker(selected: RangeColor, onSelect: (RangeColor) -> Unit) {
+    val darkTheme = isSystemInDarkTheme()
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        // Six swatches still fit next to each other on a 360 dp wide phone.
+        modifier = Modifier.selectableGroup().padding(start = 56.dp, end = 16.dp, bottom = 8.dp),
+    ) {
+        RangeColor.entries.forEach { color ->
+            val palette = color.palette(darkTheme)
+            val isSelected = color == selected
+            val label = stringResource(color.label)
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(palette.soft)
+                    .border(
+                        width = if (isSelected) 2.dp else 1.dp,
+                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else palette.strong,
+                        shape = CircleShape,
+                    )
+                    .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(color) })
+                    .semantics { contentDescription = label },
+            ) {
+                Box(Modifier.size(16.dp).clip(CircleShape).background(palette.strong), contentAlignment = Alignment.Center) {
+                    if (isSelected) {
+                        Icon(Icons.Filled.Check, contentDescription = null, tint = palette.onStrong, modifier = Modifier.size(12.dp))
+                    }
                 }
             }
         }

@@ -11,8 +11,12 @@ import java.util.Locale
 private val dayMonthYear = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH)
 private val dayMonth = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)
 private val dayOnly = DateTimeFormatter.ofPattern("d", Locale.ENGLISH)
+private val monthYear = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)
 
 fun formatDate(date: LocalDate): String = date.format(dayMonthYear)
+
+/** "November 2026". */
+fun formatMonthYear(date: LocalDate): String = date.format(monthYear)
 
 /** "12 May 2024", "12 – 18 May 2024", "28 Apr – 3 May 2024" or "28 Dec 2023 – 3 Jan 2024". */
 fun formatDateRange(start: LocalDate?, end: LocalDate?): String? {

@@ -7,6 +7,7 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_clear">Clear</string>
     <string name="action_clear_date">Clear date</string>
+    <string name="date_picker_choose_year">Choose the year</string>
     <string name="action_close">Close</string>
     <string name="action_delete">Delete</string>
     <string name="action_dismiss">Dismiss</string>
@@ -180,6 +181,15 @@
     <string name="settings_map_title">Map</string>
     <string name="settings_flag_map">Flags on the map</string>
     <string name="settings_flag_map_description">Paint the countries you have visited with their flag</string>
+    <string name="settings_calendar_title">Calendar</string>
+    <string name="settings_range_color">Colour of the dates</string>
+    <string name="settings_range_color_description">Used for the days you pick in the calendar, from arrival to departure</string>
+    <string name="range_color_green">Green</string>
+    <string name="range_color_blue">Blue</string>
+    <string name="range_color_teal">Teal</string>
+    <string name="range_color_orange">Orange</string>
+    <string name="range_color_purple">Purple</string>
+    <string name="range_color_pink">Pink</string>
 
     <string name="settings_cities_title">City database</string>
     <string name="settings_cities_description">City search works offline with a local copy of GeoNames. Download a bigger list to find smaller towns and villages. Your diary is not affected when you switch.</string>
