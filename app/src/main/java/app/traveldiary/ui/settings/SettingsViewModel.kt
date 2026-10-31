@@ -8,6 +8,7 @@ import app.traveldiary.data.cities.CityDataset
 import app.traveldiary.data.cities.CityImportState
 import app.traveldiary.data.cities.InstalledCities
 import app.traveldiary.data.diary.InvalidBackupException
+import app.traveldiary.map.RegionGeometry
 import app.traveldiary.ui.theme.RangeColor
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
@@ -15,11 +16,16 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/** Who made the flag of [region] ("Lombardy, Italy"), and where it comes from. */
+data class RegionFlagCreditRow(val regionCode: String, val region: String, val author: String, val licence: String, val source: String)
 
 /** A home period as listed in Settings; [endDate] is null while the user still lives there. */
 data class HomeRow(val periodId: Long, val placeName: String, val startDate: LocalDate, val endDate: LocalDate?)
@@ -42,6 +48,17 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     val importState: StateFlow<CityImportState> = container.cities.importState
 
     val flagMap: StateFlow<Boolean> = container.settings.flagMap
+
+    /** Authors and licences of the region flags, read from the app's files once Settings shows. */
+    val regionFlagCredits: StateFlow<List<RegionFlagCreditRow>> = flow {
+        val rows = container.flags.regionCredits.map { credit ->
+            val country = container.countries.name(RegionGeometry.countryOf(credit.regionCode))
+            RegionFlagCreditRow(credit.regionCode, "${container.regions.name(credit.regionCode)}, $country", credit.author, credit.licence, credit.source)
+        }
+        emit(rows.sortedBy { it.region })
+    }
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val rangeColor: StateFlow<RangeColor> = container.settings.rangeColor
 

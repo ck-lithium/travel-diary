@@ -15,8 +15,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -46,6 +49,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -64,6 +68,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -100,6 +105,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onAddHome: () -> Unit, onEditHo
     val flagMap by viewModel.flagMap.collectAsStateWithLifecycle()
     val rangeColor by viewModel.rangeColor.collectAsStateWithLifecycle()
     val homes by viewModel.homes.collectAsStateWithLifecycle()
+    val regionFlagCredits by viewModel.regionFlagCredits.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var pendingImport by rememberSaveable { mutableStateOf<Uri?>(null) }
@@ -122,6 +128,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onAddHome: () -> Unit, onEditHo
         rangeColor = rangeColor,
         onRangeColorChange = viewModel::setRangeColor,
         homes = homes,
+        regionFlagCredits = regionFlagCredits,
         onAddHome = onAddHome,
         onEditHome = onEditHome,
         snackbarHostState = snackbarHostState,
@@ -169,6 +176,7 @@ fun SettingsScreenContent(
     rangeColor: RangeColor,
     onRangeColorChange: (RangeColor) -> Unit,
     homes: List<HomeRow>,
+    regionFlagCredits: List<RegionFlagCreditRow>,
     onAddHome: () -> Unit,
     onEditHome: (periodId: Long) -> Unit,
     snackbarHostState: SnackbarHostState,
@@ -180,6 +188,7 @@ fun SettingsScreenContent(
     onImport: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
+    var showRegionFlagCredits by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -335,8 +344,49 @@ fun SettingsScreenContent(
                 leadingContent = { Icon(Icons.Outlined.Flag, contentDescription = null) },
                 modifier = Modifier.clickable { uriHandler.openUri(FLAG_ICONS_URL) },
             )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_region_flag_data)) },
+                supportingContent = { Text(stringResource(R.string.settings_region_flag_data_description)) },
+                leadingContent = { Icon(Icons.Outlined.Flag, contentDescription = null) },
+                modifier = Modifier.clickable { showRegionFlagCredits = true },
+            )
         }
     }
+
+    if (showRegionFlagCredits) {
+        RegionFlagCreditsDialog(
+            credits = regionFlagCredits,
+            onOpen = uriHandler::openUri,
+            onDismiss = { showRegionFlagCredits = false },
+        )
+    }
+}
+
+/** The author and licence of every region flag, as their licences ask. */
+@Composable
+private fun RegionFlagCreditsDialog(credits: List<RegionFlagCreditRow>, onOpen: (String) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_region_flag_data)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.region_flag_credits_message), style = MaterialTheme.typography.bodyMedium)
+                LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                    items(credits, key = { it.regionCode }) { credit ->
+                        ListItem(
+                            headlineContent = { Text(credit.region) },
+                            supportingContent = { Text("${credit.author} · ${credit.licence}") },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable { onOpen(credit.source) },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+        },
+    )
 }
 
 @Composable

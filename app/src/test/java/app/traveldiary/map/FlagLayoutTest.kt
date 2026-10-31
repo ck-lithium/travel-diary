@@ -73,6 +73,19 @@ class FlagLayoutTest {
         assertEquals(wide.center, frame.center)
     }
 
+    @Test
+    fun framesFollowTheProportionsOfTheFlagImage() {
+        // A square flag (Swiss cantons) on a wide region is stretched at most twice, then cropped.
+        val wide = Rect(0f, 0f, 400f, 100f)
+        val frame = flagFrame(wide, aspect = 1f)
+        assertEquals(400f, frame.width, 0.001f)
+        assertEquals(400f / FLAG_MAX_STRETCH, frame.height, 0.001f)
+        assertEquals(wide.center, frame.center)
+        // On a square region it fits exactly.
+        val square = Rect(0f, 0f, 100f, 100f)
+        assertEquals(square, flagFrame(square, aspect = 1f))
+    }
+
     private fun Rect.contains(other: Rect): Boolean {
         val epsilon = 0.01f
         return left <= other.left + epsilon && top <= other.top + epsilon &&

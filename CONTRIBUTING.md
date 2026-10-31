@@ -60,11 +60,15 @@ request, so please run them locally before pushing.
 The files in `app/src/main/assets` are generated, do not edit them by hand:
 
 - map shapes, countries and cities: `tools/build_assets.py` (see the README);
-- flag images: `tools/build_flags.sh`, which needs `rsvg-convert` and ImageMagick.
+- region shapes: `tools/build_regions.py`, which needs shapely (`pip install shapely`);
+- flag images: `tools/build_flags.sh`, which needs `rsvg-convert` and ImageMagick;
+- region flags and their credits: `tools/build_region_flags.py`, which needs the same tools.
 
 If you change one of these scripts, commit the regenerated files in the same pull request.
 New data or images must come with a license compatible with the GPL (public domain, CC0,
 CC BY, MIT, Apache 2.0 and similar); credit them in the README and in Settings > About.
+Images that stay separate files, like the region flags, may also be CC BY-SA, when each one is
+listed with its author and licence.
 
 ## Pull requests
 

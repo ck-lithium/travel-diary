@@ -215,10 +215,13 @@ def split_code(code, outer_ring):
     return code
 
 
-def build_map(geojson_path, countries, out_path):
+def country_polygons(geojson_path, countries):
+    """Yields (code, rings) for every polygon of the map, simplified, its outer ring first.
+
+    Also used by build_regions.py, which cuts the regions to these exact shapes.
+    """
     with open(geojson_path, encoding="utf-8") as f:
         features = json.load(f)["features"]
-    shapes = {}  # code -> list of rings
     for feature in features:
         props = feature["properties"]
         name = props["NAME"]
@@ -234,10 +237,19 @@ def build_map(geojson_path, countries, out_path):
         polygons = geometry["coordinates"] if geometry["type"] == "MultiPolygon" else [geometry["coordinates"]]
         for polygon in polygons:
             part_code = split_code(code, polygon[0])
+            # A latitude cut turns one polygon into one part on each side.
+            parts = {}
             for ring in polygon:
                 for ring_code, part in cut_ring(part_code, ring):
                     if len(part) >= 3:
-                        shapes.setdefault(ring_code, []).append(simplify_ring(part, SIMPLIFY_TOLERANCE))
+                        parts.setdefault(ring_code, []).append(simplify_ring(part, SIMPLIFY_TOLERANCE))
+            yield from parts.items()
+
+
+def build_map(geojson_path, countries, out_path):
+    shapes = {}  # code -> list of rings
+    for code, rings in country_polygons(geojson_path, countries):
+        shapes.setdefault(code, []).extend(rings)
 
     total_points = 0
     with open(out_path, "wb") as out:

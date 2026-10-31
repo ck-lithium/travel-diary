@@ -37,6 +37,7 @@
     <string name="map_empty_hint">Search a city to add your first place, or long-press anywhere on the map to drop a pin.</string>
     <string name="map_mode_gravity">Center of gravity over time</string>
     <string name="map_mode_places">Show visited places</string>
+    <string name="map_regions">Regions</string>
     <string name="gravity_title">Center of gravity</string>
     <string name="gravity_period">Period</string>
     <string name="gravity_period_30d">1 m</string>
@@ -53,6 +54,10 @@
     <plurals name="summary_countries">
         <item quantity="one">country</item>
         <item quantity="other">countries</item>
+    </plurals>
+    <plurals name="summary_regions">
+        <item quantity="one">region</item>
+        <item quantity="other">regions</item>
     </plurals>
     <plurals name="summary_places">
         <item quantity="one">place</item>
@@ -130,10 +135,18 @@
     <!-- Places list -->
     <string name="places_title">My places</string>
     <string name="places_tab_countries">By country</string>
+    <string name="places_tab_regions">By region</string>
     <string name="places_tab_timeline">Timeline</string>
+    <string name="places_region_unknown">Region not known</string>
+    <string name="places_region_show">Show the places</string>
+    <string name="places_region_hide">Hide the places</string>
+    <plurals name="places_regions_count">
+        <item quantity="one">%d region</item>
+        <item quantity="other">%d regions</item>
+    </plurals>
     <string name="places_timeline_undated">No date</string>
     <string name="places_empty_title">Your diary is empty</string>
-    <string name="places_empty_message">Add the cities you have visited and they will show up here, grouped by country and on a timeline.</string>
+    <string name="places_empty_message">Add the cities you have visited and they will show up here, grouped by country and region, and on a timeline.</string>
     <string name="places_empty_action">Add a place</string>
     <plurals name="places_count">
         <item quantity="one">%d place</item>
@@ -181,7 +194,7 @@
     <string name="settings_home_description">The days between your trips count as spent at home</string>
     <string name="settings_map_title">Map</string>
     <string name="settings_flag_map">Flags on the map</string>
-    <string name="settings_flag_map_description">Paint the countries you have visited with their flag</string>
+    <string name="settings_flag_map_description">Paint the countries or regions you have visited with their flag</string>
     <string name="settings_calendar_title">Calendar</string>
     <string name="settings_range_color">Colour of the dates</string>
     <string name="settings_range_color_description">Used for the days you pick in the calendar, from arrival to departure</string>
@@ -246,4 +259,7 @@
     <string name="settings_city_data_description">GeoNames (geonames.org), licensed under CC BY 4.0</string>
     <string name="settings_flag_data">Flags</string>
     <string name="settings_flag_data_description">flag-icons by Panayiotis Lipiridis, MIT License</string>
+    <string name="settings_region_flag_data">Region flags</string>
+    <string name="settings_region_flag_data_description">Wikimedia Commons, by their authors: public domain, CC BY or CC BY-SA. Tap for the list</string>
+    <string name="region_flag_credits_message">Each flag is by its author, under the licence shown. Tap one to open its page on Wikimedia Commons.</string>
 </resources>

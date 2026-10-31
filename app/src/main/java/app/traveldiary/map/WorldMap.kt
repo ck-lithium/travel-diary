@@ -14,6 +14,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
@@ -32,10 +33,16 @@ import app.traveldiary.ui.theme.LocalMapColors
 @Immutable
 data class MapPin(val id: Long, val position: Offset, val isHome: Boolean = false)
 
+/** Below this zoom (1 = the whole world) the borders between regions would only blur the map. */
+private const val REGION_BORDERS_MIN_ZOOM = 2f
+
 /**
  * The world map: visited countries filled, with their flag when it is in [flags], places shown as
  * pins. Drag to pan, pinch or double-tap to zoom, tap a country or a pin, long-press to pick a
  * position.
+ *
+ * With [showRegions] (and [regions] loaded), the visited regions are filled instead, [flags] are
+ * those of the regions, and taps pick a region, or the country where no region is known.
  */
 @Composable
 fun WorldMap(
@@ -46,30 +53,46 @@ fun WorldMap(
     modifier: Modifier = Modifier,
     flags: Map<String, ImageBitmap> = emptyMap(),
     selectedCountry: String? = null,
+    regions: RegionMap? = null,
+    showRegions: Boolean = false,
+    visitedRegions: Set<String> = emptySet(),
+    selectedRegion: String? = null,
     interactive: Boolean = true,
     gravityTrajectory: GravityTrajectory? = null,
     gravityCurrentPosition: Offset? = null,
     gravityProgress: Float = 1f,
     onCountryClick: (String?) -> Unit = {},
+    onRegionClick: (String) -> Unit = {},
     onPinClick: (Long) -> Unit = {},
     onLongPress: (Offset) -> Unit = {},
 ) {
     val colors = LocalMapColors.current
     val scope = rememberCoroutineScope()
     val pinTouchRadius = with(LocalDensity.current) { 24.dp.toPx() }
-    val visitedPath = remember(map, visitedCountries) { map?.pathOf(visitedCountries) }
-    val flagFills = remember(map, visitedCountries, flags) {
-        map?.flagFills(flags.filterKeys { it in visitedCountries }).orEmpty()
+    val regionMap = regions.takeIf { showRegions }
+    val visitedPath = remember(map, regionMap, visitedCountries, visitedRegions) {
+        if (regionMap != null) regionMap.pathOf(visitedRegions) else map?.pathOf(visitedCountries)
     }
-    val selectedPath = remember(map, selectedCountry) { selectedCountry?.let { map?.path(it) } }
+    val flagFills = remember(map, regionMap, visitedCountries, visitedRegions, flags) {
+        if (regionMap != null) {
+            regionMap.flagFills(flags.filterKeys { it in visitedRegions })
+        } else {
+            map?.flagFills(flags.filterKeys { it in visitedCountries }).orEmpty()
+        }
+    }
+    val selectedPath = remember(map, regionMap, selectedCountry, selectedRegion) {
+        selectedRegion?.let { regionMap?.path(it) } ?: selectedCountry?.let { map?.path(it) }
+    }
     val sortedPins = remember(pins) { pins.sortedBy { it.isHome } }
     val homeIcon = rememberVectorPainter(Icons.Filled.Home)
     val homeTint = remember(colors.pinBorder) { ColorFilter.tint(colors.pinBorder) }
 
     // The gesture detectors are installed once; let them see the latest values.
     val currentMap by rememberUpdatedState(map)
+    val currentRegions by rememberUpdatedState(regionMap)
     val currentPins by rememberUpdatedState(pins)
     val currentOnCountryClick by rememberUpdatedState(onCountryClick)
+    val currentOnRegionClick by rememberUpdatedState(onRegionClick)
     val currentOnPinClick by rememberUpdatedState(onPinClick)
     val currentOnLongPress by rememberUpdatedState(onLongPress)
 
@@ -93,7 +116,12 @@ fun WorldMap(
                             currentOnPinClick(pin.id)
                         } else if (state.isReady) {
                             val point = state.toMap(position)
-                            currentOnCountryClick(currentMap?.geometry?.countryAt(point.x, point.y))
+                            val region = currentRegions?.geometry?.regionAt(point.x, point.y)
+                            if (region != null) {
+                                currentOnRegionClick(region)
+                            } else {
+                                currentOnCountryClick(currentMap?.geometry?.countryAt(point.x, point.y))
+                            }
                         }
                     },
                 )
@@ -108,6 +136,9 @@ fun WorldMap(
         val scale = state.scale
         val offset = state.offset
         val worldWidthPx = WORLD_WIDTH * scale
+        val regionBorders = regionMap?.borders?.takeIf { scale >= state.minScale * REGION_BORDERS_MIN_ZOOM }
+        // With regions shown, the borders between countries stand out a little more.
+        val countryBorder = Stroke(width = if (regionMap != null) 1.dp.toPx() / scale else Stroke.HairlineWidth)
 
         // The map repeats east-west: draw as many copies as needed to fill the view.
         var left = offset.x
@@ -120,7 +151,16 @@ fun WorldMap(
                 visitedPath?.let { drawPath(it, colors.visited) }
                 flagFills.forEach { drawPath(it.path, it.brush) }
                 selectedPath?.let { drawPath(it, colors.selection) }
-                drawPath(map.land, colors.border, style = Stroke(width = Stroke.HairlineWidth))
+                if (regionBorders != null) {
+                    // Only the countries in view: the borders of all regions are a lot of lines.
+                    val inView = Rect(-left / scale, -offset.y / scale, (size.width - left) / scale, (size.height - offset.y) / scale)
+                    regionBorders.forEach { borders ->
+                        if (borders.bounds.overlaps(inView)) {
+                            drawPath(borders.path, colors.regionBorder, style = Stroke(width = Stroke.HairlineWidth))
+                        }
+                    }
+                }
+                drawPath(map.land, colors.border, style = countryBorder)
                 selectedPath?.let { drawPath(it, colors.selectionBorder, style = Stroke(width = 2.dp.toPx() / scale)) }
                 gravityTrajectory?.let { trajectory ->
                     // Faint line for remaining trajectory ahead of the current date

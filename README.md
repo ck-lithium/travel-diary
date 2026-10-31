@@ -17,8 +17,12 @@ light up on a world map, and keep notes about each trip. Everything stays on you
 - **World map home screen**: visited countries are highlighted and every place gets a pin.
   Drag, pinch or double-tap to zoom; the map wraps around the globe. Tap a country to see your
   places there or add one.
+- **Regions**: the small switch at the bottom left of the map shows the regions you have visited
+  (states, provinces, counties: the first level inside each country) instead of the countries. A
+  city brings its region along; a pin dropped on the map gets the region it falls in.
 - **Flags on the map**: turn it on in Settings to paint every country you have visited with its
-  flag instead of a single colour.
+  flag instead of a single colour. With regions shown, about 1,500 regions get their own flag,
+  and the others the flag of their country.
 - **Center of gravity over time**: view your travels with a concept of time. A moving average
   (with configurable period: 30 days, 90 days, 180 days, 1 year, or all time) calculates your
   spherical center of gravity across time, drawing an animated line across the globe with interactive
@@ -27,7 +31,8 @@ light up on a world map, and keep notes about each trip. Everything stays on you
   every capital, including the smallest countries). Bigger lists with up to 236,000 towns and
   villages can be downloaded from [GeoNames](https://www.geonames.org) in Settings.
 - **A diary for each place**: several visits per place, each with optional arrival and departure
-  dates, picked together in one calendar, and notes. Browse them by country or on a timeline.
+  dates, picked together in one calendar, and notes. Browse them by country, by region or on a
+  timeline.
 - **Your home**: tell the app where you live (it asks once, on the first launch, or later in
   Settings) and add only your trips: the days in between count as spent at home, for example in
   the center of gravity. Homes have a little house on the map, and you can add a new one when you
@@ -61,7 +66,7 @@ tap **Add**. You can also download the APK directly from the
 | Language and UI | Kotlin, Jetpack Compose, Material 3 |
 | Storage | Two local SQLite databases (Room): `diary.db` for your places and visits, `cities.db` for the city list, which can be replaced at any time without touching the diary |
 | Photos | Picked with the system photo picker (no storage permission), then saved as a JPEG of at most 2048 px, turned upright, in the app's private `photos/` folder |
-| Map | Drawn on a Compose `Canvas` from the bundled country shapes (Miller projection), so no map tiles, API key or network are needed |
+| Map | Drawn on a Compose `Canvas` from the bundled country and region shapes (Miller projection), so no map tiles, API key or network are needed |
 | City search | Accent-insensitive prefix search over the local city list: "zurich", "Zürich" and "Zuerich" all work |
 | Downloads | Settings > City database downloads `citiesXXXX.zip` straight from `download.geonames.org` and imports it in one transaction |
 
@@ -77,6 +82,22 @@ internationally recognised ones. The script aligns the map with the city list, s
 always highlights the country it belongs to: French overseas regions, Svalbard, Caribbean
 Netherlands, Tokelau, Christmas and Cocos Islands become their own countries, Crimea is part of
 Ukraine and Western Sahara is separate from Morocco.
+
+The region shapes and region flags have their own scripts. `tools/build_regions.py` needs
+[shapely](https://shapely.readthedocs.io) (`pip install shapely`), and the flags need
+`rsvg-convert` and ImageMagick:
+
+```sh
+python3 tools/build_regions.py --raw /tmp/travel-diary-raw --out app/src/main/assets --download
+python3 tools/build_region_flags.py --raw /tmp/travel-diary-raw
+```
+
+Regions are the GeoNames ones, so every city of the list knows its region. Their shapes come from
+Natural Earth's admin-1 map, whose units don't always match: it splits Italy into provinces and
+France into departments, which the script merges into regions by looking at the cities inside
+each unit. The regions are then cut to the country shapes, so they follow the same coasts and
+borders. About 640 small regions (municipalities of Slovenia, parishes of Jersey, the newer
+counties of Kenya...) have no shape: their places are still listed under their region.
 
 ## Development
 
@@ -98,11 +119,14 @@ app/src/main/java/app/traveldiary/
   data/cities/     city list: Room database, GeoNames parser, downloads, search
   data/diary/      your places, visits and photos, JSON backup
   data/countries/  country names, continents, flags
+  data/regions/    which region each place is in
   data/stats/      statistics
-  map/             projection, country shapes, the zoomable map composable
+  map/             projection, country and region shapes, the zoomable map composable
   ui/              one package per screen (map, search, editor, place, places, stats, settings)
 tools/build_assets.py           regenerates the bundled map and city data
+tools/build_regions.py          regenerates the region shapes (needs shapely)
 tools/build_flags.sh            renders the bundled flag images (needs rsvg-convert and ImageMagick)
+tools/build_region_flags.py     renders the region flags from Wikimedia Commons, with their credits
 scripts/create-release-key.sh   creates the release signing key
 ```
 
@@ -157,11 +181,15 @@ and run `./gradlew assembleRelease -PappVersion=1.0.0`.
 
 ## Data and credits
 
-- Country shapes: [Natural Earth](https://www.naturalearthdata.com), public domain.
+- Country and region shapes: [Natural Earth](https://www.naturalearthdata.com), public domain.
 - Cities, regions and countries: [GeoNames](https://www.geonames.org), licensed under
   [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Flags: [flag-icons](https://github.com/lipis/flag-icons) by Panayiotis Lipiridis, MIT License
   (see `app/src/main/assets/flags/LICENSE`).
+- Region flags: [Wikimedia Commons](https://commons.wikimedia.org), found through
+  [Wikidata](https://www.wikidata.org) (CC0). Each image is by its author, in the public domain or
+  under CC BY or CC BY-SA, as listed in `app/src/main/assets/flags/regions/credits.tsv` and in
+  Settings > About > Region flags. The images there are resized copies, under the same licence.
 - Inspired by Pin Traveller on iOS.
 
 ## License
