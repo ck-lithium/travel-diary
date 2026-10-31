@@ -8,6 +8,7 @@ import app.traveldiary.data.cities.CityDataset
 import app.traveldiary.data.cities.CityImportState
 import app.traveldiary.data.cities.InstalledCities
 import app.traveldiary.data.diary.InvalidBackupException
+import app.traveldiary.ui.theme.RangeColor
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -41,6 +42,10 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     val importState: StateFlow<CityImportState> = container.cities.importState
 
     val flagMap: StateFlow<Boolean> = container.settings.flagMap
+
+    val rangeColor: StateFlow<RangeColor> = container.settings.rangeColor
+
+    fun setRangeColor(color: RangeColor) = container.settings.setRangeColor(color)
 
     /** Every home period, the most recent first. */
     val homes: StateFlow<List<HomeRow>> = container.diary.places

@@ -115,8 +115,15 @@ private val DarkMapColors = MapColors(
 val LocalMapColors = staticCompositionLocalOf { LightMapColors }
 
 @Composable
-fun TravelDiaryTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalMapColors provides if (darkTheme) DarkMapColors else LightMapColors) {
+fun TravelDiaryTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    rangeColor: RangeColor = RangeColor.Default,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(
+        LocalMapColors provides if (darkTheme) DarkMapColors else LightMapColors,
+        LocalRangePalette provides rangeColor.palette(darkTheme),
+    ) {
         MaterialTheme(colorScheme = if (darkTheme) DarkColors else LightColors, content = content)
     }
 }

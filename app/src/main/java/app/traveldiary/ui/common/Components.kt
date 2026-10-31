@@ -4,27 +4,42 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.DateRangePickerDefaults
+import androidx.compose.material3.DateRangePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDateRangePickerState
@@ -48,6 +63,8 @@ import app.traveldiary.R
 import app.traveldiary.data.cities.SearchNormalizer
 import app.traveldiary.data.countries.Country
 import app.traveldiary.data.countries.flagEmoji
+import app.traveldiary.ui.theme.LocalRangePalette
+import app.traveldiary.ui.theme.RangePalette
 import java.time.LocalDate
 
 @Composable
@@ -192,15 +209,112 @@ fun DateRangeField(
                 TextButton(onClick = { pickerOpen = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         ) {
-            // The calendar scrolls through the months: it takes the room the dialog has left.
-            DateRangePicker(
-                state = pickerState,
-                title = {
-                    Text(pickerTitle, modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp))
-                },
-                showModeToggle = false,
-                modifier = Modifier.weight(1f),
-            )
+            RangePickerContent(pickerState, pickerTitle)
+        }
+    }
+}
+
+/**
+ * The calendar of [DateRangeField], in the tint picked in Settings. Tapping the dates on top or the
+ * month above the calendar switches to a list of years, to jump far without scrolling month by month.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ColumnScope.RangePickerContent(state: DateRangePickerState, title: String) {
+    var choosingYear by rememberSaveable { mutableStateOf(false) }
+    val palette = LocalRangePalette.current
+    val colors = DatePickerDefaults.colors(
+        selectedDayContainerColor = palette.strong,
+        selectedDayContentColor = palette.onStrong,
+        dayInSelectionRangeContainerColor = palette.soft,
+        dayInSelectionRangeContentColor = palette.onSoft,
+        todayDateBorderColor = palette.strong,
+    )
+    val dateFormatter = remember { DatePickerDefaults.dateFormatter() }
+    val displayedMonth = pickerMillisToDate(state.displayedMonthMillis)
+
+    Text(
+        title,
+        style = MaterialTheme.typography.labelLarge,
+        color = colors.titleContentColor,
+        modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
+    )
+    DateRangePickerDefaults.DateRangePickerHeadline(
+        selectedStartDateMillis = state.selectedStartDateMillis,
+        selectedEndDateMillis = state.selectedEndDateMillis,
+        displayMode = state.displayMode,
+        dateFormatter = dateFormatter,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { choosingYear = !choosingYear }
+            .padding(start = 24.dp, end = 12.dp, top = 8.dp, bottom = 12.dp),
+        contentColor = colors.headlineContentColor,
+    )
+    HorizontalDivider(color = colors.dividerColor)
+    TextButton(
+        onClick = { choosingYear = !choosingYear },
+        modifier = Modifier.padding(start = 12.dp, top = 4.dp),
+    ) {
+        Text(formatMonthYear(displayedMonth))
+        Icon(
+            if (choosingYear) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+            contentDescription = stringResource(R.string.date_picker_choose_year),
+        )
+    }
+
+    // Both take the room the dialog has left: the calendar scrolls through the months.
+    if (choosingYear) {
+        YearGrid(
+            selectedYear = displayedMonth.year,
+            palette = palette,
+            onSelect = { year ->
+                // The calendar scrolls to the displayed month by itself when it comes back.
+                state.displayedMonthMillis = displayedMonth.withYear(year).withDayOfMonth(1).toPickerMillis()
+                choosingYear = false
+            },
+            modifier = Modifier.weight(1f),
+        )
+    } else {
+        DateRangePicker(
+            state = state,
+            dateFormatter = dateFormatter,
+            colors = colors,
+            title = null,
+            headline = null,
+            showModeToggle = false,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun YearGrid(selectedYear: Int, palette: RangePalette, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val years = DatePickerDefaults.YearRange
+    // Start with the selected year on the third row, so the years around it are visible too.
+    val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = (selectedYear - years.first - 6).coerceAtLeast(0))
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        state = gridState,
+        contentPadding = PaddingValues(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier,
+    ) {
+        items(years.count()) { index ->
+            val year = years.first + index
+            val selected = year == selectedYear
+            Surface(
+                onClick = { onSelect(year) },
+                shape = CircleShape,
+                color = if (selected) palette.strong else Color.Transparent,
+                contentColor = if (selected) palette.onStrong else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.height(40.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(year.toString(), style = MaterialTheme.typography.bodyLarge)
+                }
+            }
         }
     }
 }

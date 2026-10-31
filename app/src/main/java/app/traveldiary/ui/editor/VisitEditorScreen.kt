@@ -1,28 +1,38 @@
 package app.traveldiary.ui.editor
 
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.AddPhotoAlternate
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -32,11 +42,16 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -46,12 +61,18 @@ import app.traveldiary.ui.common.CountryPickerDialog
 import app.traveldiary.ui.common.DateRangeField
 import app.traveldiary.ui.common.Flag
 import app.traveldiary.ui.common.formatCoordinates
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VisitEditorScreen(viewModel: VisitEditorViewModel, onClose: () -> Unit, onSaved: (placeId: Long) -> Unit) {
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var pickCountry by rememberSaveable { mutableStateOf(false) }
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri?.let(viewModel::pickPhoto)
+    }
 
     Scaffold(
         topBar = {
@@ -133,6 +154,16 @@ fun VisitEditorScreen(viewModel: VisitEditorViewModel, onClose: () -> Unit, onSa
                 )
             }
 
+            if (viewModel.canAddPhoto) {
+                NewPlacePhoto(
+                    photo = viewModel.photo?.let(viewModel::photoFile),
+                    saving = viewModel.savingPhoto,
+                    failed = viewModel.photoFailed,
+                    onPick = { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    onRemove = viewModel::removePhoto,
+                )
+            }
+
             Text(stringResource(R.string.editor_when), style = MaterialTheme.typography.titleSmall)
             DateRangeField(
                 label = stringResource(R.string.editor_dates),
@@ -193,5 +224,53 @@ fun VisitEditorScreen(viewModel: VisitEditorViewModel, onClose: () -> Unit, onSa
                 pickCountry = false
             },
         )
+    }
+}
+
+/** Optional photo of a place being created: the same one its page can get later, picked right away. */
+@Composable
+private fun NewPlacePhoto(photo: File?, saving: Boolean, failed: Boolean, onPick: () -> Unit, onRemove: () -> Unit) {
+    val preview by produceState<ImageBitmap?>(null, photo) {
+        value = photo?.let { file ->
+            withContext(Dispatchers.IO) {
+                // A preview does not need the full-size copy.
+                BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = 4 })?.asImageBitmap()
+            }
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.place_photo), style = MaterialTheme.typography.titleSmall)
+        val image = preview
+        if (photo != null && image != null) {
+            Image(
+                image,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth().height(180.dp).clip(MaterialTheme.shapes.medium),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onPick, enabled = !saving) { Text(stringResource(R.string.place_change_photo)) }
+                TextButton(onClick = onRemove, enabled = !saving) { Text(stringResource(R.string.place_remove_photo)) }
+            }
+        } else {
+            OutlinedCard(onClick = onPick, enabled = !saving, modifier = Modifier.fillMaxWidth()) {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.place_add_photo)) },
+                    supportingContent = { Text(stringResource(R.string.editor_photo_hint)) },
+                    leadingContent = { Icon(Icons.Outlined.AddPhotoAlternate, contentDescription = null) },
+                    trailingContent = {
+                        if (saving) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                )
+            }
+        }
+        if (failed) {
+            Text(
+                stringResource(R.string.place_photo_failed),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
 }
