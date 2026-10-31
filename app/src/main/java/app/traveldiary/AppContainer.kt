@@ -8,6 +8,7 @@ import app.traveldiary.data.countries.FlagRepository
 import app.traveldiary.data.diary.DiaryDatabase
 import app.traveldiary.data.diary.DiaryRepository
 import app.traveldiary.data.diary.PlacePhotos
+import app.traveldiary.data.regions.RegionRepository
 import app.traveldiary.data.settings.SettingsRepository
 import app.traveldiary.map.WorldMapRepository
 import java.io.File
@@ -29,6 +30,7 @@ class AppContainer(context: Context) {
     val diary = DiaryRepository(DiaryDatabase.create(this.context), photos)
     val cities = CityRepository(this.context, CityDatabase.create(this.context), scope)
     val worldMap = WorldMapRepository(this.context, scope)
+    val regions = RegionRepository(this.context, worldMap)
 
     fun start() {
         worldMap.load()

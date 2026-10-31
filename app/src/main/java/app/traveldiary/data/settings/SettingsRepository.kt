@@ -21,6 +21,16 @@ class SettingsRepository(context: Context) {
         _flagMap.value = enabled
     }
 
+    private val _regionMap = MutableStateFlow(preferences.getBoolean(KEY_REGION_MAP, false))
+
+    /** Show the visited regions on the map instead of the visited countries. */
+    val regionMap: StateFlow<Boolean> = _regionMap.asStateFlow()
+
+    fun setRegionMap(enabled: Boolean) {
+        preferences.edit { putBoolean(KEY_REGION_MAP, enabled) }
+        _regionMap.value = enabled
+    }
+
     private val _rangeColor = MutableStateFlow(
         RangeColor.entries.firstOrNull { it.name == preferences.getString(KEY_RANGE_COLOR, null) } ?: RangeColor.Default,
     )
@@ -40,6 +50,7 @@ class SettingsRepository(context: Context) {
 
     private companion object {
         const val KEY_FLAG_MAP = "flag_map"
+        const val KEY_REGION_MAP = "region_map"
         const val KEY_HOME_ASKED = "home_asked"
         const val KEY_RANGE_COLOR = "range_color"
     }

@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.outlined.TravelExplore
@@ -35,6 +37,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.traveldiary.R
 import app.traveldiary.ui.common.EmptyState
 import app.traveldiary.ui.common.Flag
+import app.traveldiary.ui.common.RegionFlag
 import app.traveldiary.ui.common.formatDate
 import app.traveldiary.ui.common.formatDateRange
 
@@ -79,19 +83,21 @@ fun PlacesScreenContent(
                 )
                 return@Column
             }
+            val tabs = listOf(R.string.places_tab_countries, R.string.places_tab_regions, R.string.places_tab_timeline)
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                SegmentedButton(
-                    selected = tab == 0,
-                    onClick = { tab = 0 },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                ) { Text(stringResource(R.string.places_tab_countries)) }
-                SegmentedButton(
-                    selected = tab == 1,
-                    onClick = { tab = 1 },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                ) { Text(stringResource(R.string.places_tab_timeline)) }
+                tabs.forEachIndexed { index, label ->
+                    SegmentedButton(
+                        selected = tab == index,
+                        onClick = { tab = index },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = tabs.size),
+                    ) { Text(stringResource(label)) }
+                }
             }
-            if (tab == 0) CountryList(state.countries, onOpenPlace) else Timeline(state.timeline, onOpenPlace)
+            when (tab) {
+                0 -> CountryList(state.countries, onOpenPlace)
+                1 -> RegionList(state.regions, onOpenPlace)
+                else -> Timeline(state.timeline, onOpenPlace)
+            }
         }
     }
 }
@@ -102,42 +108,91 @@ private fun CountryList(countries: List<CountryGroup>, onOpenPlace: (Long) -> Un
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
         countries.forEach { group ->
             stickyHeader(key = "country-${group.code}") {
-                Surface(color = MaterialTheme.colorScheme.surface) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Flag(group.code, size = 22.sp)
-                        Spacer(Modifier.width(12.dp))
-                        Text(group.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                        Text(
-                            pluralStringResource(R.plurals.places_count, group.places.size, group.places.size),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                CountryHeader(group.code, group.name, pluralStringResource(R.plurals.places_count, group.places.size, group.places.size))
+            }
+            items(group.places, key = { "place-${it.id}" }) { row -> PlaceItem(row, onOpenPlace) }
+        }
+    }
+}
+
+/** The visited regions of each country; a region opens to show its places. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun RegionList(countries: List<RegionGroup>, onOpenPlace: (Long) -> Unit) {
+    var opened by rememberSaveable { mutableStateOf(listOf<String>()) }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+        countries.forEach { group ->
+            stickyHeader(key = "regions-${group.countryCode}") {
+                val known = group.regions.count { it.code != null }
+                CountryHeader(group.countryCode, group.countryName, pluralStringResource(R.plurals.places_regions_count, known, known))
+            }
+            group.regions.forEach { region ->
+                val key = "${group.countryCode}/${region.code}"
+                val open = key in opened
+                item(key = "region-$key") {
+                    ListItem(
+                        headlineContent = { Text(region.name ?: stringResource(R.string.places_region_unknown)) },
+                        supportingContent = {
+                            Text(
+                                listOfNotNull(
+                                    pluralStringResource(R.plurals.places_count, region.places.size, region.places.size),
+                                    region.lastVisit?.let(::formatDate),
+                                ).joinToString(" · "),
+                            )
+                        },
+                        leadingContent = { RegionFlag(region.code) },
+                        trailingContent = {
+                            Icon(
+                                if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                contentDescription = stringResource(if (open) R.string.places_region_hide else R.string.places_region_show),
+                            )
+                        },
+                        modifier = Modifier.clickable { opened = if (open) opened - key else opened + key },
+                    )
+                }
+                if (open) {
+                    items(region.places, key = { "region-$key-place-${it.id}" }) { row ->
+                        PlaceItem(row, onOpenPlace, Modifier.padding(start = 24.dp))
                     }
                 }
             }
-            items(group.places, key = { "place-${it.id}" }) { row ->
-                val visits = pluralStringResource(R.plurals.place_visits, row.visits, row.visits)
-                ListItem(
-                    headlineContent = { Text(row.name) },
-                    supportingContent = {
-                        Text(listOfNotNull(row.region, visits, row.lastVisit?.let(::formatDate)).joinToString(" · "))
-                    },
-                    leadingContent = {
-                        Icon(
-                            if (row.isHome) Icons.Filled.Home else Icons.Filled.Place,
-                            contentDescription = if (row.isHome) stringResource(R.string.home_icon_description) else null,
-                            tint = MaterialTheme.colorScheme.tertiary,
-                        )
-                    },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-                    modifier = Modifier.clickable { onOpenPlace(row.id) },
-                )
-            }
         }
     }
+}
+
+@Composable
+private fun CountryHeader(code: String, name: String, count: String) {
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Flag(code, size = 22.sp)
+            Spacer(Modifier.width(12.dp))
+            Text(name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Text(count, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun PlaceItem(row: PlaceRow, onOpenPlace: (Long) -> Unit, modifier: Modifier = Modifier) {
+    val visits = pluralStringResource(R.plurals.place_visits, row.visits, row.visits)
+    ListItem(
+        headlineContent = { Text(row.name) },
+        supportingContent = {
+            Text(listOfNotNull(row.region, visits, row.lastVisit?.let(::formatDate)).joinToString(" · "))
+        },
+        leadingContent = {
+            Icon(
+                if (row.isHome) Icons.Filled.Home else Icons.Filled.Place,
+                contentDescription = if (row.isHome) stringResource(R.string.home_icon_description) else null,
+                tint = MaterialTheme.colorScheme.tertiary,
+            )
+        },
+        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+        modifier = Modifier.clickable { onOpenPlace(row.id) }.then(modifier),
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)

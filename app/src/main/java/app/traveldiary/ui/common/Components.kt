@@ -1,13 +1,15 @@
 package app.traveldiary.ui.common
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
@@ -47,13 +50,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
@@ -65,7 +73,10 @@ import app.traveldiary.data.countries.Country
 import app.traveldiary.data.countries.flagEmoji
 import app.traveldiary.ui.theme.LocalRangePalette
 import app.traveldiary.ui.theme.RangePalette
+import java.io.IOException
 import java.time.LocalDate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun EmptyState(
@@ -105,6 +116,34 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun Flag(countryCode: String, modifier: Modifier = Modifier, size: TextUnit = 24.sp) {
     Text(flagEmoji(countryCode), fontSize = size, modifier = modifier)
+}
+
+/** Small flag of a region from assets/flags/regions, or a map icon for a region without one. */
+@Composable
+fun RegionFlag(regionCode: String?, modifier: Modifier = Modifier) {
+    val assets = LocalContext.current.assets
+    val flag by produceState<ImageBitmap?>(null, regionCode) {
+        value = regionCode?.let { code ->
+            withContext(Dispatchers.IO) {
+                try {
+                    // The images are 240 px high: a quarter of the pixels is plenty for a list.
+                    val options = BitmapFactory.Options().apply { inSampleSize = 2 }
+                    assets.open("flags/regions/${code.lowercase()}.webp").use { BitmapFactory.decodeStream(it, null, options) }
+                        ?.asImageBitmap()
+                } catch (_: IOException) {
+                    null
+                }
+            }
+        }
+    }
+    Box(modifier.size(width = 36.dp, height = 24.dp), contentAlignment = Alignment.Center) {
+        val image = flag
+        if (image != null) {
+            Image(image, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+        } else {
+            Icon(Icons.Outlined.Map, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
 /** Searchable list of every country and territory. */
@@ -220,7 +259,7 @@ fun DateRangeField(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ColumnScope.RangePickerContent(state: DateRangePickerState, title: String) {
+private fun RangePickerContent(state: DateRangePickerState, title: String) {
     var choosingYear by rememberSaveable { mutableStateOf(false) }
     val palette = LocalRangePalette.current
     val colors = DatePickerDefaults.colors(
@@ -233,57 +272,61 @@ private fun ColumnScope.RangePickerContent(state: DateRangePickerState, title: S
     val dateFormatter = remember { DatePickerDefaults.dateFormatter() }
     val displayedMonth = pickerMillisToDate(state.displayedMonthMillis)
 
-    Text(
-        title,
-        style = MaterialTheme.typography.labelLarge,
-        color = colors.titleContentColor,
-        modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
-    )
-    DateRangePickerDefaults.DateRangePickerHeadline(
-        selectedStartDateMillis = state.selectedStartDateMillis,
-        selectedEndDateMillis = state.selectedEndDateMillis,
-        displayMode = state.displayMode,
-        dateFormatter = dateFormatter,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { choosingYear = !choosingYear }
-            .padding(start = 24.dp, end = 12.dp, top = 8.dp, bottom = 12.dp),
-        contentColor = colors.headlineContentColor,
-    )
-    HorizontalDivider(color = colors.dividerColor)
-    TextButton(
-        onClick = { choosingYear = !choosingYear },
-        modifier = Modifier.padding(start = 12.dp, top = 4.dp),
-    ) {
-        Text(formatMonthYear(displayedMonth))
-        Icon(
-            if (choosingYear) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
-            contentDescription = stringResource(R.string.date_picker_choose_year),
+    // DatePickerDialog puts its content in a Box, which would draw the title, the dates and the
+    // calendar on top of each other: they need a Column of their own.
+    Column {
+        Text(
+            title,
+            style = MaterialTheme.typography.labelLarge,
+            color = colors.titleContentColor,
+            modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
         )
-    }
-
-    // Both take the room the dialog has left: the calendar scrolls through the months.
-    if (choosingYear) {
-        YearGrid(
-            selectedYear = displayedMonth.year,
-            palette = palette,
-            onSelect = { year ->
-                // The calendar scrolls to the displayed month by itself when it comes back.
-                state.displayedMonthMillis = displayedMonth.withYear(year).withDayOfMonth(1).toPickerMillis()
-                choosingYear = false
-            },
-            modifier = Modifier.weight(1f),
-        )
-    } else {
-        DateRangePicker(
-            state = state,
+        DateRangePickerDefaults.DateRangePickerHeadline(
+            selectedStartDateMillis = state.selectedStartDateMillis,
+            selectedEndDateMillis = state.selectedEndDateMillis,
+            displayMode = state.displayMode,
             dateFormatter = dateFormatter,
-            colors = colors,
-            title = null,
-            headline = null,
-            showModeToggle = false,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { choosingYear = !choosingYear }
+                .padding(start = 24.dp, end = 12.dp, top = 8.dp, bottom = 12.dp),
+            contentColor = colors.headlineContentColor,
         )
+        HorizontalDivider(color = colors.dividerColor)
+        TextButton(
+            onClick = { choosingYear = !choosingYear },
+            modifier = Modifier.padding(start = 12.dp, top = 4.dp),
+        ) {
+            Text(formatMonthYear(displayedMonth))
+            Icon(
+                if (choosingYear) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+                contentDescription = stringResource(R.string.date_picker_choose_year),
+            )
+        }
+
+        // Both take the room the dialog has left: the calendar scrolls through the months.
+        if (choosingYear) {
+            YearGrid(
+                selectedYear = displayedMonth.year,
+                palette = palette,
+                onSelect = { year ->
+                    // The calendar scrolls to the displayed month by itself when it comes back.
+                    state.displayedMonthMillis = displayedMonth.withYear(year).withDayOfMonth(1).toPickerMillis()
+                    choosingYear = false
+                },
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            DateRangePicker(
+                state = state,
+                dateFormatter = dateFormatter,
+                colors = colors,
+                title = null,
+                headline = null,
+                showModeToggle = false,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 

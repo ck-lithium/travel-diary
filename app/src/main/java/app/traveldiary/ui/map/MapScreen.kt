@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -44,6 +45,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,10 +58,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,6 +76,8 @@ import app.traveldiary.map.GravityTimeline
 import app.traveldiary.map.MapFocus
 import app.traveldiary.map.MapViewportState
 import app.traveldiary.map.MillerProjection
+import app.traveldiary.map.RegionGeometry
+import app.traveldiary.map.RegionMap
 import app.traveldiary.map.WorldMap
 import app.traveldiary.map.rememberMapViewportState
 import app.traveldiary.ui.common.Flag
@@ -91,12 +97,18 @@ fun MapScreen(
     onAddCustomPlace: (latitude: Double, longitude: Double) -> Unit,
 ) {
     val map by viewModel.map.collectAsStateWithLifecycle()
+    val regions by viewModel.regionMap.collectAsStateWithLifecycle()
+    val showRegions by viewModel.showRegions.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val flags by viewModel.flags.collectAsStateWithLifecycle()
     MapScreenContent(
         map = map,
         state = state,
         flags = flags,
+        regions = regions,
+        showRegions = showRegions,
+        onShowRegionsChange = viewModel::setShowRegions,
+        regionName = viewModel::regionName,
         countryOf = viewModel::country,
         onSearch = onSearch,
         onOpenPlace = onOpenPlace,
@@ -117,6 +129,10 @@ fun MapScreenContent(
     onAddCustomPlace: (latitude: Double, longitude: Double) -> Unit,
     modifier: Modifier = Modifier,
     flags: Map<String, ImageBitmap> = emptyMap(),
+    regions: RegionMap? = null,
+    showRegions: Boolean = false,
+    onShowRegionsChange: (Boolean) -> Unit = {},
+    regionName: (String) -> String = { it },
     onPeriodChange: (GravityPeriod) -> Unit = {},
     focusPlaceId: Long? = null,
     onFocusHandled: () -> Unit = {},
@@ -125,6 +141,7 @@ fun MapScreenContent(
 ) {
     val scope = rememberCoroutineScope()
     var selectedCountry by rememberSaveable { mutableStateOf(initialSelectedCountry) }
+    var selectedRegion by rememberSaveable { mutableStateOf<String?>(null) }
     var gravityMode by rememberSaveable { mutableStateOf(false) }
     var playbackProgress by rememberSaveable { mutableFloatStateOf(1f) }
     var isPlaying by rememberSaveable { mutableStateOf(false) }
@@ -162,10 +179,15 @@ fun MapScreenContent(
             pins = state.pins,
             flags = flags,
             selectedCountry = selectedCountry,
+            regions = regions,
+            showRegions = showRegions,
+            visitedRegions = state.visitedRegions,
+            selectedRegion = selectedRegion,
             gravityTrajectory = if (gravityMode) state.gravityTimeline.trajectory else null,
             gravityCurrentPosition = if (gravityMode) state.gravityTimeline.trajectory.positionAt(playbackProgress) else null,
             gravityProgress = if (gravityMode) playbackProgress else 1f,
             onCountryClick = { selectedCountry = it },
+            onRegionClick = { selectedRegion = it },
             onPinClick = onOpenPlace,
             onLongPress = { position ->
                 onAddCustomPlace(MillerProjection.latitude(position.y), MillerProjection.longitude(position.x))
@@ -183,68 +205,101 @@ fun MapScreenContent(
                 .fillMaxWidth(),
         )
 
-        Row(
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(16.dp)
                 .widthIn(max = 560.dp)
                 .fillMaxWidth(),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (gravityMode) {
-                GravityTimelineCard(
-                    timeline = state.gravityTimeline,
-                    period = state.gravityPeriod,
-                    progress = playbackProgress,
-                    isPlaying = isPlaying,
-                    onProgressChange = {
-                        isPlaying = false
-                        playbackProgress = it
-                    },
-                    onPlayToggle = { isPlaying = !isPlaying },
-                    onPeriodSelect = onPeriodChange,
-                    onClose = {
-                        isPlaying = false
-                        gravityMode = false
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-            } else {
-                SummaryCard(state, Modifier.weight(1f))
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallFloatingActionButton(
-                    onClick = {
-                        selectedCountry = null
-                        if (gravityMode) {
+            RegionToggle(
+                checked = showRegions,
+                onCheckedChange = {
+                    selectedCountry = null
+                    selectedRegion = null
+                    onShowRegionsChange(it)
+                },
+            )
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (gravityMode) {
+                    GravityTimelineCard(
+                        timeline = state.gravityTimeline,
+                        period = state.gravityPeriod,
+                        progress = playbackProgress,
+                        isPlaying = isPlaying,
+                        onProgressChange = {
+                            isPlaying = false
+                            playbackProgress = it
+                        },
+                        onPlayToggle = { isPlaying = !isPlaying },
+                        onPeriodSelect = onPeriodChange,
+                        onClose = {
                             isPlaying = false
                             gravityMode = false
-                        } else {
-                            gravityMode = true
-                            if (playbackProgress == 0f) playbackProgress = 1f
-                        }
-                    },
-                    containerColor = if (gravityMode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                    contentColor = if (gravityMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
-                ) {
-                    Icon(
-                        imageVector = if (gravityMode) Icons.Filled.Place else Icons.Filled.Timeline,
-                        contentDescription = stringResource(if (gravityMode) R.string.map_mode_places else R.string.map_mode_gravity),
+                        },
+                        modifier = Modifier.weight(1f),
                     )
+                } else {
+                    SummaryCard(state, showRegions, Modifier.weight(1f))
                 }
 
-                SmallFloatingActionButton(onClick = {
-                    selectedCountry = null
-                    viewport.animateTo(scope, MapFocus.World)
-                }) {
-                    Icon(Icons.Filled.Public, contentDescription = stringResource(R.string.map_show_world))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SmallFloatingActionButton(
+                        onClick = {
+                            selectedCountry = null
+                            selectedRegion = null
+                            if (gravityMode) {
+                                isPlaying = false
+                                gravityMode = false
+                            } else {
+                                gravityMode = true
+                                if (playbackProgress == 0f) playbackProgress = 1f
+                            }
+                        },
+                        containerColor = if (gravityMode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        contentColor = if (gravityMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                    ) {
+                        Icon(
+                            imageVector = if (gravityMode) Icons.Filled.Place else Icons.Filled.Timeline,
+                            contentDescription = stringResource(if (gravityMode) R.string.map_mode_places else R.string.map_mode_gravity),
+                        )
+                    }
+
+                    SmallFloatingActionButton(onClick = {
+                        selectedCountry = null
+                        selectedRegion = null
+                        viewport.animateTo(scope, MapFocus.World)
+                    }) {
+                        Icon(Icons.Filled.Public, contentDescription = stringResource(R.string.map_show_world))
+                    }
                 }
             }
         }
 
         if (map == null) CircularProgressIndicator(Modifier.align(Alignment.Center))
+    }
+
+    selectedRegion?.let { code ->
+        val countryCode = RegionGeometry.countryOf(code)
+        RegionSheet(
+            name = regionName(code),
+            countryCode = countryCode,
+            country = countryOf(countryCode),
+            places = state.places.filter { state.placeRegions[it.place.id] == code },
+            onDismiss = { selectedRegion = null },
+            onAddCity = {
+                selectedRegion = null
+                onSearch(countryCode)
+            },
+            onOpenPlace = { placeId ->
+                selectedRegion = null
+                onOpenPlace(placeId)
+            },
+        )
     }
 
     selectedCountry?.let { code ->
@@ -282,6 +337,32 @@ private fun SearchPill(onClick: () -> Unit, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/** Small switch at the bottom left: regions on the map when on, countries when off. */
+@Composable
+private fun RegionToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = 4.dp,
+    ) {
+        // Inside the Surface, so the ripple follows its rounded shape.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+                .padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+        ) {
+            Text(stringResource(R.string.map_regions), style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.width(4.dp))
+            // A Switch has a fixed size: shrink it on screen, and keep its layout box just as small.
+            Box(Modifier.size(width = 40.dp, height = 24.dp), contentAlignment = Alignment.Center) {
+                Switch(checked = checked, onCheckedChange = null, modifier = Modifier.scale(0.75f))
+            }
         }
     }
 }
@@ -387,7 +468,7 @@ private fun GravityTimelineCard(
 }
 
 @Composable
-private fun SummaryCard(state: MapUiState, modifier: Modifier = Modifier) {
+private fun SummaryCard(state: MapUiState, showRegions: Boolean, modifier: Modifier = Modifier) {
     if (!state.loaded) return
     Surface(
         modifier = modifier,
@@ -403,12 +484,21 @@ private fun SummaryCard(state: MapUiState, modifier: Modifier = Modifier) {
             )
         } else {
             Row(Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
-                val countries = state.visitedCountries.size
-                SummaryValue(
-                    value = countries.toString(),
-                    label = pluralStringResource(R.plurals.summary_countries, countries),
-                    modifier = Modifier.weight(1f),
-                )
+                if (showRegions) {
+                    val regions = state.visitedRegions.size
+                    SummaryValue(
+                        value = regions.toString(),
+                        label = pluralStringResource(R.plurals.summary_regions, regions),
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    val countries = state.visitedCountries.size
+                    SummaryValue(
+                        value = countries.toString(),
+                        label = pluralStringResource(R.plurals.summary_countries, countries),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
                 SummaryValue(
                     value = state.places.size.toString(),
                     label = pluralStringResource(R.plurals.summary_places, state.places.size),
@@ -445,6 +535,30 @@ fun formatShare(share: Float): String {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private fun RegionSheet(
+    name: String,
+    countryCode: String,
+    country: Country?,
+    places: List<PlaceWithVisits>,
+    onDismiss: () -> Unit,
+    onAddCity: () -> Unit,
+    onOpenPlace: (Long) -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        PlacesSheetContent(
+            flagCode = countryCode,
+            title = name,
+            subtitle = country?.name ?: countryCode,
+            places = places,
+            addLabel = stringResource(R.string.country_add_city, country?.name ?: countryCode),
+            onAddCity = onAddCity,
+            onOpenPlace = onOpenPlace,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun CountrySheet(
     code: String,
     country: Country?,
@@ -467,6 +581,28 @@ fun CountrySheetContent(
     onOpenPlace: (Long) -> Unit,
 ) {
     val name = country?.name ?: code
+    PlacesSheetContent(
+        flagCode = code,
+        title = name,
+        subtitle = null,
+        places = places,
+        addLabel = stringResource(R.string.country_add_city, name),
+        onAddCity = onAddCity,
+        onOpenPlace = onOpenPlace,
+    )
+}
+
+/** A country or a region: its flag, name, places visited there and a button to add one. */
+@Composable
+private fun PlacesSheetContent(
+    flagCode: String,
+    title: String,
+    subtitle: String?,
+    places: List<PlaceWithVisits>,
+    addLabel: String,
+    onAddCity: () -> Unit,
+    onOpenPlace: (Long) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -476,15 +612,16 @@ fun CountrySheetContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Flag(code, size = 44.sp)
+            Flag(flagCode, size = 44.sp)
             Column {
-                Text(name, style = MaterialTheme.typography.headlineSmall)
+                Text(title, style = MaterialTheme.typography.headlineSmall)
+                val visited = if (places.isEmpty()) {
+                    stringResource(R.string.country_not_visited)
+                } else {
+                    pluralStringResource(R.plurals.country_places_visited, places.size, places.size)
+                }
                 Text(
-                    text = if (places.isEmpty()) {
-                        stringResource(R.string.country_not_visited)
-                    } else {
-                        pluralStringResource(R.plurals.country_places_visited, places.size, places.size)
-                    },
+                    text = listOfNotNull(subtitle, visited).joinToString(" · "),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -512,7 +649,7 @@ fun CountrySheetContent(
         Button(onClick = onAddCity, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Filled.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.country_add_city, name))
+            Text(addLabel)
         }
     }
 }

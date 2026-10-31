@@ -14,6 +14,9 @@ build/
 *.jks
 *.keystore
 
+# Python bytecode of tools/
+__pycache__/
+
 # OS
 .DS_Store
 Thumbs.db
