@@ -37,9 +37,9 @@ which installs it and keeps it up to date:
 
 [<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="50">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/0PkCk0/travel-diary)
 
-Or by hand: in Obtainium tap **Add app**, paste `https://github.com/0PkCk0/travel-diary` and
+Or by hand: in Obtainium tap **Add app**, paste `https://github.com/ck-lithium/travel-diary` and
 tap **Add**. You can also download the APK directly from the
-[releases page](https://github.com/0PkCk0/travel-diary/releases). Android 8.0 or newer is required.
+[releases page](https://github.com/ck-lithium/travel-diary/releases). Android 8.0 or newer is required.
 
 ## How it works
 
